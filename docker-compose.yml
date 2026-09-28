@@ -1,0 +1,63 @@
+services:
+  pointage_db:
+    image: ghcr.io/baosystems/postgis:16-3.5
+    container_name: pointage_db
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       pointage_db
+    ports:
+      - '7433:5432'
+    volumes:
+      - pointage_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: pointage_redis
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    container_name: pointage_minio
+    ports:
+      - '9010:9010'
+      - '9011:9011'
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --address ":9010" --console-address ":9011"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9010/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: pointage_mailpit
+    ports:
+      - '1045:1045'
+      - '8045:8045'
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY:     'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+      MP_MAX_MESSAGES:             '500'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost:8045/readyz']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+    pointage_db_data:
