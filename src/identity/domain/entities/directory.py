@@ -52,6 +52,21 @@ class Directory(AggregateRoot[DirectoryId]):
         directory.record_event(DirectoryCreated(directory_id))
         return directory
 
+    def update(
+        self,
+        *,
+        code: str | None,
+        name: str | None,
+        location: Location | None
+    ) -> None:
+
+        if code is not None:
+            self._code = code
+        if name is not None:
+            self._name = name
+        if location is not None:
+            self._location = location
+
     def rename(self, name: str) -> None:
         """Set the display name."""
         self._name = name.strip()

@@ -9,5 +9,9 @@ class UserId(EntityId[Literal["user"]]):
     """Identity of a directory member."""
 
 
+class EmployeeId(EntityId[Literal["user"]]):
+    """Identity of a directory member."""
+
+
 class DirectoryId(EntityId[Literal["directory"]]):
     """Identity of a directory (top-level tenant)."""

@@ -1,3 +1,6 @@
+from .employee_events import (
+    EmployeeCreated,
+)
 from .user_events import (
     DirectoryCreated,
     UserDeactivated,
@@ -7,6 +10,7 @@ from .user_events import (
 
 __all__ = [
     "DirectoryCreated",
+    "EmployeeCreated",
     "UserDeactivated",
     "UserRegistered",
     "UserRoleChanged",

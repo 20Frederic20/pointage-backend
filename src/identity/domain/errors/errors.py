@@ -39,3 +39,10 @@ class DirectoryAlreadyExistsError(DomainError):
     code = "DIRECTORY_ALREADY_EXISTS"
     http_status = 409
     severity = Severity.WARNING
+
+
+class EmployeeWithThiisNumberAlreadyExistsError(DomainError):
+
+    code = "EMPLOYEE_WITH_THIS_NUMBER_ALREADY_EXISTS"
+    http_status = 409
+    severity = Severity.WARNING

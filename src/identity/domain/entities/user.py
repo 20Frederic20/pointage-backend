@@ -5,7 +5,6 @@ from typing import Self
 
 from core.domain.entity import AggregateRoot
 
-from ..errors import RolePermissionDeniedError
 from ..events import UserDeactivated, UserRegistered, UserRoleChanged
 from ..value_objects.ids import UserId
 from ..value_objects.role import Role
@@ -89,29 +88,6 @@ class User(AggregateRoot[UserId]):
         user.record_event(UserRegistered(user_id))
         return user
 
-    @classmethod
-    def register_from_invite(
-        cls,
-        user_id: UserId,
-        *,
-        email: str,
-        password_hash: str,
-        role: Role,
-        first_name: str | None = None,
-        last_name: str | None = None,
-    ) -> Self:
-        """Join an existing workspace by accepting an invitation."""
-        user = cls(
-            user_id,
-            email=email,
-            password_hash=password_hash,
-            role=role,
-            first_name=first_name,
-            last_name=last_name,
-        )
-        user.record_event(UserRegistered(user_id))
-        return user
-
     # ---- state changes ----
 
     def change_role(self, new_role: Role) -> Role:
@@ -162,17 +138,6 @@ class User(AggregateRoot[UserId]):
         """
         self._last_active_at = _utcnow()
         self.touch()
-
-    # ---- invariants ----
-
-    def ensure_can_invite(self, invited_role: Role) -> None:
-        """An inviter must strictly outrank the role they grant."""
-        if self._role.rank <= invited_role.rank:
-            raise RolePermissionDeniedError(
-                f"Role {self._role.value} cannot invite a user with role "
-                f"{invited_role.value}",
-                context=str(self.id),
-            )
 
     # ---- read side ----
 
