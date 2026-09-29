@@ -59,7 +59,7 @@ def _notification(
     )
 
 
-def to_workspace_created(
+def to_directory_created(
     event: DirectoryCreated
 ) -> DirectoryCreatedNotification:
     return _notification(
@@ -103,7 +103,7 @@ def to_user_deactivated(event: UserDeactivated) -> UserDeactivatedNotification:
 
 
 USERS_EVENT_MAPPERS: dict[type, object] = {
-    DirectoryCreated: to_workspace_created,
+    DirectoryCreated: to_directory_created,
     UserRegistered: to_user_registered,
     UserRoleChanged: to_user_role_changed,
     UserDeactivated: to_user_deactivated,

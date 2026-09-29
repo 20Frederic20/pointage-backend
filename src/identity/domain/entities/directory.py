@@ -43,7 +43,7 @@ class Directory(AggregateRoot[DirectoryId]):
         *,
         code: str,
         name: str,
-        location: str
+        location: Location
     ) -> Self:
         """
         Factory for a brand-new workspace; records: class:`DirectoryCreated`.
@@ -66,5 +66,5 @@ class Directory(AggregateRoot[DirectoryId]):
         return self._code
 
     @property
-    def location(self) -> int:
+    def location(self) -> Location:
         return self._location

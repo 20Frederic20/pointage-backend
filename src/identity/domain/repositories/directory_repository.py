@@ -13,3 +13,11 @@ class IDirectoryRepository(IRepository[Directory, DirectoryId]):
     async def exists_any(self) -> bool:
         """Whether at least one Directory exists — the signup gate."""
         ...
+
+    @abstractmethod
+    async def exists_by_code(self, value) -> bool:
+        ...
+
+    @abstractmethod
+    async def exists_by_code_or_name(self, value) -> bool:
+        ...

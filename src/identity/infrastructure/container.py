@@ -20,6 +20,10 @@ from core.domain.events import BaseEvent, IEventBus
 from core.infrastructure.database import SQLAlchemyUnitOfWork
 from core.infrastructure.events import EventBusEmitter
 from core.infrastructure.outbox import TransactionalOutbox
+from identity.application.commands.create_directory import CreateDirectoryCommand
+from identity.application.handlers.create_directory_handler import (
+    CreateDirectoryHandler,
+)
 
 from ..application import (
     USERS_EVENT_MAPPERS,
@@ -54,7 +58,7 @@ class UsersContainer:
     """Request-scope wiring for the users bounded context."""
 
     user_repository: UserRepository
-    Directory_repository: DirectoryRepository
+    directory_repository: DirectoryRepository
     unit_of_work: IUnitOfWork
     event_bus: IEventBus[BaseEvent]
     password_hasher: PasswordHasher
@@ -63,6 +67,7 @@ class UsersContainer:
 
     def __post_init__(self) -> None:
         request_map = RequestMap()
+        request_map.bind(CreateDirectoryCommand, CreateDirectoryHandler)
         request_map.bind(RegisterUserCommand, RegisterUserHandler)
         request_map.bind(ChangeUserRoleCommand, ChangeUserRoleHandler)
         request_map.bind(UpdateUserProfileCommand, UpdateUserProfileHandler)
@@ -86,7 +91,7 @@ class UsersContainer:
             return RegisterUserHandler(
                 unit_of_work=self.unit_of_work,
                 user_repository=self.user_repository,
-                Directory_repository=self.Directory_repository,
+                directory_repository=self.directory_repository,
                 password_hasher=self.password_hasher,
                 event_outbox=self.event_outbox,
             )
@@ -101,10 +106,16 @@ class UsersContainer:
                 user_repository=self.user_repository,
                 event_outbox=self.event_outbox,
             )
+        if handler_type is CreateDirectoryHandler:
+            return CreateDirectoryHandler(
+                unit_of_work=self.unit_of_work,
+                directory_repository=self.directory_repository,
+                event_outbox=self.event_outbox,
+            )
         if handler_type is UpdateDirectoryHandler:
             return UpdateDirectoryHandler(
                 unit_of_work=self.unit_of_work,
-                Directory_repository=self.Directory_repository,
+                directory_repository=self.directory_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is GetUserByEmailHandler:
@@ -115,7 +126,7 @@ class UsersContainer:
             return GetUsersHandler(user_repository=self.user_repository)
         if handler_type is GetDirectoryByIdHandler:
             return GetDirectoryByIdHandler(
-                Directory_repository=self.Directory_repository
+                directory_repository=self.directory_repository
             )
         raise TypeError(
             f"No users-scope wiring for handler {handler_type.__name__}"
@@ -136,7 +147,7 @@ def build_users_container(
     """Wire the real adapters over one request-scoped session."""
     return UsersContainer(
         user_repository=UserRepository(session),
-        Directory_repository=DirectoryRepository(session),
+        directory_repository=DirectoryRepository(session),
         unit_of_work=SQLAlchemyUnitOfWork(session),
         event_bus=event_bus,
         password_hasher=password_hasher,

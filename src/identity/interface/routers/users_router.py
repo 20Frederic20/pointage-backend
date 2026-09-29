@@ -13,7 +13,6 @@ from ...application import (
 from ...infrastructure import UsersContainer
 from ..dependencies import get_users
 from ..schemas import (
-    AcceptInviteRequest,
     RegisterRequest,
     UserResponse,
 )
@@ -45,7 +44,7 @@ async def register(
             password=payload.password,
             first_name=payload.first_name,
             last_name=payload.last_name,
-            workspace_name=payload.workspace_name,
+            directory_name=payload.directory_name,
         )
     )
     return _user_response(dto)

@@ -2,11 +2,12 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.domain.errors import ConflictError, NotFoundError
+from identity.domain.value_objects.location import Location
 
 from ...domain.entities import Directory
 from ...domain.repositories import IDirectoryRepository
@@ -39,6 +40,23 @@ class DirectoryRepository(IDirectoryRepository):
         row = await self._session.scalar(select(DirectoryModel.id).limit(1))
         return row is not None
 
+    async def exists_by_code(self, value) -> bool:
+        row = await self._session.scalar(
+            select(DirectoryModel.id).where(DirectoryModel.code == value).limit(1)
+        )
+        return row is not None
+
+    async def exists_by_code_or_name(self, value) -> bool:
+        row = await self._session.scalar(
+            select(DirectoryModel.id).where(
+                or_(
+                    DirectoryModel.code == value,
+                    DirectoryModel.name == value
+                )
+            ).limit(1)
+        )
+        return row is not None
+
     async def save(self, directory: Directory) -> None:
         if directory.version == 0:
             await self._insert(directory)
@@ -58,7 +76,7 @@ class DirectoryRepository(IDirectoryRepository):
                     id=directory.id.value,
                     name=directory.name,
                     code=directory.code,
-                    location=directory.location,
+                    location=directory.location.to_wkt(),
                     created_at=directory.created_at or datetime.now(UTC),
                     updated_at=directory.updated_at or datetime.now(UTC),
                     version_id=1,
@@ -78,7 +96,7 @@ class DirectoryRepository(IDirectoryRepository):
             .values(
                 name=directory.name,
                 code=directory.code,
-                location=directory.location,
+                location=directory.location.to_wkt(),
                 updated_at=directory.updated_at or datetime.now(UTC),
                 version_id=directory.version + 1,
             )
@@ -91,11 +109,15 @@ class DirectoryRepository(IDirectoryRepository):
             )
 
     def _to_aggregate(self, row) -> Directory:
+
+
+        location_obj = Location.from_wkt(row.location) if row.location else None
+
         return Directory(
             DirectoryId(row.id),
             name=row.name,
             code=row.code,
-            location=row.location,
+            location=location_obj,
             created_at=row.created_at,
             updated_at=row.updated_at,
             version=row.version_id,

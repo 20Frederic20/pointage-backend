@@ -2,28 +2,22 @@
 
 from .dependencies import get_users
 from .schemas import (
-    AcceptInviteRequest,
     ChangeRoleRequest,
-    CreateInviteRequest,
-    InviteResponse,
+    DirectoryResponse,
     RegisterRequest,
+    UpdateDirectoryRequest,
     UpdateProfileRequest,
-    UpdateWorkspaceRequest,
     UserListResponse,
     UserResponse,
-    WorkspaceResponse,
 )
 
 __all__ = [
-    "AcceptInviteRequest",
     "ChangeRoleRequest",
-    "CreateInviteRequest",
-    "InviteResponse",
+    "DirectoryResponse",
     "RegisterRequest",
+    "UpdateDirectoryRequest",
     "UpdateProfileRequest",
-    "UpdateWorkspaceRequest",
     "UserListResponse",
     "UserResponse",
-    "WorkspaceResponse",
     "get_users",
 ]

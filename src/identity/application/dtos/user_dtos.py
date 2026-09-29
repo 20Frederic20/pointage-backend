@@ -85,14 +85,14 @@ class DirectoryDTO(DTO):
     updated_at: datetime | None = None
 
     @classmethod
-    def from_aggregate(cls, workspace: Directory) -> "DirectoryDTO":
+    def from_aggregate(cls, directory: Directory) -> "DirectoryDTO":
         return cls(
-            id=workspace.id.value,
-            name=workspace.name,
-            code=workspace.code,
-            location=workspace.location,
-            created_at=workspace.created_at,
-            updated_at=workspace.updated_at,
+            id=directory.id.value,
+            name=directory.name,
+            code=directory.code,
+            location=directory.location,
+            created_at=directory.created_at,
+            updated_at=directory.updated_at,
         )
 
 

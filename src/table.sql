@@ -1,7 +1,9 @@
----------------------------------------------------------------
+
+
+-------------------------------------------------------------------------
 
 CREATE TABLE outbox (
-    id SERIAL PRIMARY KEY,
+    id VARCHAR(32) PRIMARY KEY,
     event_id VARCHAR(255) NOT NULL,
     event_name VARCHAR(255) NOT NULL,
     topic VARCHAR(255) NOT NULL,
@@ -16,7 +18,7 @@ CREATE TABLE outbox (
 
 CREATE INDEX ix_outbox_status ON outbox (status);
 
----------------------------------------------------------------
+----------------------------------------------------------------------------
 -- 1. Activer l'extension PostGIS (nécessaire pour GeoAlchemy2)
 CREATE EXTENSION IF NOT EXISTS postgis;
 
@@ -48,3 +50,11 @@ CREATE TABLE users (
 
 -- 4. Index sur directory_id (demandé via index=True dans le modèle)
 CREATE INDEX ix_users_directory_id ON users (directory_id);
+
+
+-------------------------------------------------------------------------------
+-- Ajouter la colonne version_id à directories si elle n'existe pas
+ALTER TABLE directories ADD COLUMN IF NOT EXISTS version_id INTEGER DEFAULT 1 NOT NULL;
+
+-- Ajouter la colonne version_id à users si elle n'existe pas
+ALTER TABLE users ADD COLUMN IF NOT EXISTS version_id INTEGER DEFAULT 1 NOT NULL;

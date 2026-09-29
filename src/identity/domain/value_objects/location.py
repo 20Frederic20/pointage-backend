@@ -37,3 +37,20 @@ class Location:
             "wkt": self.to_wkt(),
             "srid": self.srid,
         }
+
+    @classmethod
+    def from_wkt(cls, wkt_str: str, srid: int = 4326) -> "Location":
+        """
+        Crée un objet Location à partir d'une chaîne WKT (ex: 'POINT(6.43 5.32)').
+        """
+        # Nettoyage simple de la chaîne WKT
+        coords_str = wkt_str.replace("POINT", "").strip(" ()")
+        parts = coords_str.split()
+        if len(parts) != 2:
+            raise ValueError(f"Format WKT invalide pour un Point : {wkt_str}")
+
+        # Rappel : WKT stocke (Longitude Latitude)
+        longitude = float(parts[0])
+        latitude = float(parts[1])
+
+        return cls(latitude=latitude, longitude=longitude, srid=srid)

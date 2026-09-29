@@ -7,7 +7,7 @@ from ..value_objects.role import Role
 
 
 class DirectoryCreated(BaseEvent[DirectoryId]):
-    """A new workspace (tenant) was created."""
+    """A new directory (tenant) was created."""
 
     def __init__(self, directory_id: DirectoryId) -> None:
         super().__init__()
@@ -17,11 +17,11 @@ class DirectoryCreated(BaseEvent[DirectoryId]):
         return self._directory_id
 
     def get_event_name(self) -> str:
-        return "users.workspace.created"
+        return "users.directory.created"
 
 
 class UserRegistered(BaseEvent[UserId]):
-    """A user joined a workspace — as the founding owner or via an invite."""
+    """A user joined a directory — as the founding owner or via an invite."""
 
     def __init__(self, user_id: UserId, *, directory_id: DirectoryId) -> None:
         super().__init__()
@@ -40,7 +40,7 @@ class UserRegistered(BaseEvent[UserId]):
 
 
 class UserRoleChanged(BaseEvent[UserId]):
-    """A user's role changed inside their workspace."""
+    """A user's role changed inside their directory."""
 
     def __init__(
         self, user_id: UserId, *, old_role: Role, new_role: Role

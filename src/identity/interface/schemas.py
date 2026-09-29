@@ -11,6 +11,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from identity.domain.value_objects.location import Location
+
 
 class _CamelSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -24,7 +26,7 @@ class RegisterRequest(_CamelSchema):
     password: str = Field(min_length=8)
     first_name: str | None = None
     last_name: str | None = None
-    workspace_name: str | None = Field(default=None, alias="workspaceName")
+    directory_name: str | None = Field(default=None, alias="directoryName")
 
 
 class AcceptInviteRequest(_CamelSchema):
@@ -48,7 +50,14 @@ class UpdateProfileRequest(_CamelSchema):
     avatar_url: str | None = Field(default=None, alias="avatarUrl")
 
 
-class UpdateWorkspaceRequest(_CamelSchema):
+class CreateDirectoryRequest(_CamelSchema):
+    code: str
+    name: str
+    longitude: float
+    latitude: float
+
+
+class UpdateDirectoryRequest(_CamelSchema):
     name: str = Field(min_length=1)
 
 
@@ -82,21 +91,10 @@ class UserListResponse(_CamelSchema):
     total: int
 
 
-class InviteResponse(_CamelSchema):
-    id: str
-    directory_id: str = Field(alias="DirectoryId")
-    email: EmailStr
-    role: RoleSchema
-    status: str
-    expires_at: datetime = Field(alias="expiresAt")
-    created_by: str = Field(alias="createdBy")
-    token: str | None = None  # present only in the creation response
-
-
-class WorkspaceResponse(_CamelSchema):
+class DirectoryResponse(_CamelSchema):
     id: str
     name: str
-    plan: str
-    seat_limit: int = Field(alias="seatLimit")
+    code: str
+    location: Location
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")

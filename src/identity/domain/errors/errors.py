@@ -32,3 +32,10 @@ class RolePermissionDeniedError(DomainError):
     code = "ROLE_PERMISSION_DENIED"
     http_status = 403
     severity = Severity.WARNING
+
+
+class DirectoryAlreadyExistsError(DomainError):
+
+    code = "DIRECTORY_ALREADY_EXISTS"
+    http_status = 409
+    severity = Severity.WARNING
