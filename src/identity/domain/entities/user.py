@@ -7,7 +7,7 @@ from core.domain.entity import AggregateRoot
 
 from ..errors import RolePermissionDeniedError
 from ..events import UserDeactivated, UserRegistered, UserRoleChanged
-from ..value_objects.ids import DirectoryId, UserId
+from ..value_objects.ids import UserId
 from ..value_objects.role import Role
 
 
@@ -20,13 +20,11 @@ class User(AggregateRoot[UserId]):
 
     Owns the credentials the auth context verifies (the password hash is a
     plain field — hashing itself is an application-layer concern through
-    the ``PasswordHasher`` port) and the role that drives RBAC. All data in
-    the system is scoped by ``directory_id``; a user belongs to exactly one.
+    the ``PasswordHasher`` port) and the role that drives RBAC.
     """
 
     __slots__ = (
         "_avatar_url",
-        "_directory_id",
         "_email",
         "_first_name",
         "_is_active",
@@ -40,7 +38,6 @@ class User(AggregateRoot[UserId]):
         self,
         user_id: UserId,
         *,
-        directory_id: DirectoryId,
         email: str,
         password_hash: str,
         role: Role = Role.EMPLOYEE,
@@ -57,7 +54,6 @@ class User(AggregateRoot[UserId]):
             user_id, created_at=created_at, updated_at=updated_at,
             version=version
         )
-        self._directory_id = directory_id
         self._email = email.strip().lower()
         self._password_hash = password_hash
         self._role = role
@@ -74,7 +70,6 @@ class User(AggregateRoot[UserId]):
         cls,
         user_id: UserId,
         *,
-        directory_id: DirectoryId,
         email: str,
         password_hash: str,
         first_name: str | None = None,
@@ -85,14 +80,13 @@ class User(AggregateRoot[UserId]):
         """
         user = cls(
             user_id,
-            directory_id=directory_id,
             email=email,
             password_hash=password_hash,
             role=Role.ADMIN,
             first_name=first_name,
             last_name=last_name,
         )
-        user.record_event(UserRegistered(user_id, directory_id=directory_id))
+        user.record_event(UserRegistered(user_id))
         return user
 
     @classmethod
@@ -100,7 +94,6 @@ class User(AggregateRoot[UserId]):
         cls,
         user_id: UserId,
         *,
-        directory_id: DirectoryId,
         email: str,
         password_hash: str,
         role: Role,
@@ -110,14 +103,13 @@ class User(AggregateRoot[UserId]):
         """Join an existing workspace by accepting an invitation."""
         user = cls(
             user_id,
-            directory_id=directory_id,
             email=email,
             password_hash=password_hash,
             role=role,
             first_name=first_name,
             last_name=last_name,
         )
-        user.record_event(UserRegistered(user_id, directory_id=directory_id))
+        user.record_event(UserRegistered(user_id))
         return user
 
     # ---- state changes ----
@@ -183,10 +175,6 @@ class User(AggregateRoot[UserId]):
             )
 
     # ---- read side ----
-
-    @property
-    def directory_id(self) -> DirectoryId:
-        return self._directory_id
 
     @property
     def email(self) -> str:

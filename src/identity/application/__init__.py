@@ -2,7 +2,6 @@
 handlers, DTOs, and integration-event plumbing."""
 
 from .commands import (
-    ChangeUserRoleCommand,
     DeactivateUserCommand,
     RecordUserActivityCommand,
     RegisterUserCommand,
@@ -22,7 +21,6 @@ from .dtos import (
     UsersPageDTO,
 )
 from .handlers import (
-    ChangeUserRoleHandler,
     DeactivateUserHandler,
     GetDirectoryByIdHandler,
     GetUserByEmailHandler,
@@ -30,7 +28,6 @@ from .handlers import (
     GetUsersHandler,
     RecordUserActivityHandler,
     RegisterUserHandler,
-    UpdateDirectoryHandler,
     UpdateUserProfileHandler,
 )
 from .notifications import USERS_EVENT_MAPPERS
@@ -44,8 +41,6 @@ from .queries import (
 
 __all__ = [
     "USERS_EVENT_MAPPERS",
-    "ChangeUserRoleCommand",
-    "ChangeUserRoleHandler",
     "CreateInviteCommand",
     "DeactivateUserCommand",
     "DeactivateUserHandler",

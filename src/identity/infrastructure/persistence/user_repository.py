@@ -11,7 +11,7 @@ from core.domain.specifications import Specification
 
 from ...domain.entities import User
 from ...domain.repositories import IUserRepository
-from ...domain.value_objects.ids import DirectoryId, UserId
+from ...domain.value_objects.ids import UserId
 from ..translators import UsersSpecificationTranslator
 from .models import UserModel
 
@@ -67,11 +67,10 @@ class UserRepository(IUserRepository):
         )
         return await self._session.scalar(stmt) or 0
 
-    async def count_active(self, directory_id: DirectoryId) -> int:
+    async def count_active(self) -> int:
         stmt = (
             select(func.count())
             .select_from(UserModel)
-            .where(UserModel.directory_id == directory_id.value)
             .where(UserModel.is_active.is_(True))
         )
         return await self._session.scalar(stmt) or 0
@@ -103,7 +102,6 @@ class UserRepository(IUserRepository):
             await self._session.execute(
                 insert(UserModel).values(
                     id=user.id.value,
-                    directory_id=user.directory_id.value,
                     email=user.email,
                     password_hash=user.password_hash,
                     role=user.role,
@@ -131,7 +129,6 @@ class UserRepository(IUserRepository):
             .where(UserModel.id == user.id.value)
             .where(UserModel.version_id == user.version)
             .values(
-                directory_id=user.directory_id.value,
                 email=user.email,
                 password_hash=user.password_hash,
                 role=user.role,
@@ -154,7 +151,6 @@ class UserRepository(IUserRepository):
     def _to_aggregate(self, row) -> User:
         return User(
             UserId(row.id),
-            directory_id=DirectoryId(row.directory_id),
             email=row.email,
             password_hash=row.password_hash,
             role=row.role,

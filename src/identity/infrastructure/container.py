@@ -27,8 +27,6 @@ from identity.application.handlers.create_directory_handler import (
 
 from ..application import (
     USERS_EVENT_MAPPERS,
-    ChangeUserRoleCommand,
-    ChangeUserRoleHandler,
     DeactivateUserCommand,
     DeactivateUserHandler,
     GetDirectoryByIdHandler,
@@ -43,8 +41,6 @@ from ..application import (
     RecordUserActivityHandler,
     RegisterUserCommand,
     RegisterUserHandler,
-    UpdateDirectoryCommand,
-    UpdateDirectoryHandler,
     UpdateUserProfileCommand,
     UpdateUserProfileHandler,
 )
@@ -69,11 +65,9 @@ class UsersContainer:
         request_map = RequestMap()
         request_map.bind(CreateDirectoryCommand, CreateDirectoryHandler)
         request_map.bind(RegisterUserCommand, RegisterUserHandler)
-        request_map.bind(ChangeUserRoleCommand, ChangeUserRoleHandler)
         request_map.bind(UpdateUserProfileCommand, UpdateUserProfileHandler)
         request_map.bind(DeactivateUserCommand, DeactivateUserHandler)
         request_map.bind(RecordUserActivityCommand, RecordUserActivityHandler)
-        request_map.bind(UpdateDirectoryCommand, UpdateDirectoryHandler)
         request_map.bind(GetUserByEmailQuery, GetUserByEmailHandler)
         request_map.bind(GetUserByIdQuery, GetUserByIdHandler)
         request_map.bind(GetUsersQuery, GetUsersHandler)
@@ -96,7 +90,6 @@ class UsersContainer:
                 event_outbox=self.event_outbox,
             )
         if handler_type in (
-            ChangeUserRoleHandler,
             DeactivateUserHandler,
             RecordUserActivityHandler,
             UpdateUserProfileHandler,
@@ -108,12 +101,6 @@ class UsersContainer:
             )
         if handler_type is CreateDirectoryHandler:
             return CreateDirectoryHandler(
-                unit_of_work=self.unit_of_work,
-                directory_repository=self.directory_repository,
-                event_outbox=self.event_outbox,
-            )
-        if handler_type is UpdateDirectoryHandler:
-            return UpdateDirectoryHandler(
                 unit_of_work=self.unit_of_work,
                 directory_repository=self.directory_repository,
                 event_outbox=self.event_outbox,

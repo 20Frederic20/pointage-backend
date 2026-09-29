@@ -74,7 +74,6 @@ class RoleSchema(StrEnum):
 
 class UserResponse(_CamelSchema):
     id: str
-    directory_id: str = Field(alias="DirectoryId")
     email: EmailStr
     role: RoleSchema
     is_active: bool = Field(alias="isActive")

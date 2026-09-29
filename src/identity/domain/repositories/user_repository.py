@@ -6,7 +6,7 @@ from core.domain.repositories import IRepository
 from core.domain.specifications import Specification
 
 from ..entities import User
-from ..value_objects.ids import DirectoryId, UserId
+from ..value_objects.ids import UserId
 
 
 class IUserRepository(IRepository[User, UserId]):
@@ -37,7 +37,7 @@ class IUserRepository(IRepository[User, UserId]):
         ...
 
     @abstractmethod
-    async def count_active(self, directory_id: DirectoryId) -> int:
+    async def count_active(self) -> int:
         """
         Active members of the workspace — the number a seat is bought against.
         """

@@ -75,7 +75,6 @@ def to_user_registered(event: UserRegistered) -> UserRegisteredNotification:
         event,
         {
             "user_id": event.get_aggregate_id().value,
-            "directory_id": event.directory_id.value,
         },
     )
 

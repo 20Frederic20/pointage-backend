@@ -35,12 +35,6 @@ class DeactivateUserHandler(CommandHandler[DeactivateUserCommand, UserDTO]):
         actor = await self._users.get_by_id(UserId(request.actor_id))
         user = await self._users.get_by_id(UserId(request.user_id))
 
-        directory_id = DirectoryId(request.directory_id)
-        if actor.directory_id != directory_id or user.directory_id != directory_id:
-            raise NotFoundError(
-                f"No user {request.user_id} in workspace {request.directory_id}",
-                context=request.user_id,
-            )
         if actor.id == user.id:
             raise RolePermissionDeniedError(
                 "A user cannot deactivate themselves",

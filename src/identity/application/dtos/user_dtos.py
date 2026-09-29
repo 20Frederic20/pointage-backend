@@ -20,7 +20,6 @@ from ...domain.value_objects import Role
 @dataclass(frozen=True)
 class UserDTO(DTO):
     id: str
-    directory_id: str
     email: str
     role: Role
     is_active: bool
@@ -35,7 +34,6 @@ class UserDTO(DTO):
     def from_aggregate(cls, user: User) -> "UserDTO":
         return cls(
             id=user.id.value,
-            directory_id=user.directory_id.value,
             email=user.email,
             role=user.role,
             is_active=user.is_active,
@@ -57,7 +55,6 @@ class UserCredentialsDTO(DTO):
     """
 
     id: str
-    directory_id: str
     email: str
     password_hash: str
     role: Role
@@ -67,7 +64,6 @@ class UserCredentialsDTO(DTO):
     def from_aggregate(cls, user: User) -> "UserCredentialsDTO":
         return cls(
             id=user.id.value,
-            directory_id=user.directory_id.value,
             email=user.email,
             password_hash=user.password_hash,
             role=user.role,

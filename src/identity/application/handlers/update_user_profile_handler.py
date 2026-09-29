@@ -6,11 +6,10 @@ from collections.abc import Sequence
 from core.application import CommandHandler, IUnitOfWork
 from core.application.outbox import IEventOutbox
 from core.domain.entity import AggregateRoot
-from core.domain.errors import NotFoundError
 
 from ...domain.entities import User
 from ...domain.repositories import IUserRepository
-from ...domain.value_objects.ids import UserId, DirectoryId
+from ...domain.value_objects.ids import UserId
 from ..commands import UpdateUserProfileCommand
 from ..dtos import UserDTO
 
@@ -32,11 +31,7 @@ class UpdateUserProfileHandler(
         self, request: UpdateUserProfileCommand
     ) -> tuple[UserDTO, Sequence[AggregateRoot]]:
         user = await self._users.get_by_id(UserId(request.user_id))
-        if user.directory_id != DirectoryId(request.directory_id):
-            raise NotFoundError(
-                f"No user {user.id} in workspace {request.directory_id}",
-                context=str(user.id),
-            )
+
         user.update_profile(
             first_name=request.first_name,
             last_name=request.last_name,

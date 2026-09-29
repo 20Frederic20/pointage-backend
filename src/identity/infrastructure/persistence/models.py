@@ -4,7 +4,7 @@ from datetime import datetime
 
 from geoalchemy2 import Geography
 from shapely.geometry import Point
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,9 +27,6 @@ class DirectoryModel(BaseModel):
 class UserModel(BaseModel):
     __tablename__ = "users"
 
-    directory_id: Mapped[str] = mapped_column(
-        String(32), ForeignKey("directories.id"), nullable=False, index=True
-    )
     email: Mapped[str] = mapped_column(
         String(255), nullable=False, unique=True
     )

@@ -7,7 +7,6 @@ from core.application import Command
 
 @dataclass(frozen=True)
 class UpdateUserProfileCommand(Command):
-    directory_id: str
     user_id: str
     first_name: str | None = None
     last_name: str | None = None

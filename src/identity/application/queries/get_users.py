@@ -10,9 +10,7 @@ from ..dtos import UsersPageDTO
 
 @dataclass(frozen=True)
 class GetUsersQuery(Query):
-    """Members of ``directory_id`` with optional role / active filters."""
 
-    directory_id: str
     role: Role | None = None
     is_active: bool | None = None
     limit: int = 50

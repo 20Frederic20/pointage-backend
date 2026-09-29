@@ -46,11 +46,11 @@ class Directory(AggregateRoot[DirectoryId]):
         location: Location
     ) -> Self:
         """
-        Factory for a brand-new workspace; records: class:`DirectoryCreated`.
+        Factory for a brand-new directory; records: class:`DirectoryCreated`.
         """
-        workspace = cls(directory_id, code=code, name=name, location=location)
-        workspace.record_event(DirectoryCreated(directory_id))
-        return workspace
+        directory = cls(directory_id, code=code, name=name, location=location)
+        directory.record_event(DirectoryCreated(directory_id))
+        return directory
 
     def rename(self, name: str) -> None:
         """Set the display name."""

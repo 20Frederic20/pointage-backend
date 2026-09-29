@@ -3,7 +3,6 @@
 from core.domain.specifications import Specification
 
 from ..entities import User
-from ..value_objects.ids import DirectoryId
 from ..value_objects.role import Role
 
 
@@ -19,20 +18,6 @@ class UserEmailIs(Specification[User]):
     @property
     def email(self) -> str:
         return self._email
-
-
-class UserBelongsToDirectory(Specification[User]):
-    __slots__ = ("_directory_id",)
-
-    def __init__(self, directory_id: DirectoryId) -> None:
-        self._directory_id = directory_id
-
-    def is_satisfied_by(self, candidate: User) -> bool:
-        return candidate.directory_id == self._directory_id
-
-    @property
-    def directory_id(self) -> DirectoryId:
-        return self._directory_id
 
 
 class UserIsActiveIs(Specification[User]):

@@ -55,10 +55,8 @@ class RegisterUserHandler(
                 context=request.email,
             )
 
-        directory_id = DirectoryId.generate()
         user_id = UserId.generate()
         directory = Directory.create(
-            directory_id,
             name=(
                 request.directory_name
                 or f"{request.email.split('@')[0]}'s directory"
@@ -66,7 +64,6 @@ class RegisterUserHandler(
         )
         user = User.register_owner(
             user_id,
-            directory_id=directory_id,
             email=request.email,
             password_hash=self._password_hasher.hash(request.password),
             first_name=request.first_name,

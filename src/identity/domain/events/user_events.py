@@ -23,20 +23,15 @@ class DirectoryCreated(BaseEvent[DirectoryId]):
 class UserRegistered(BaseEvent[UserId]):
     """A user joined a directory — as the founding owner or via an invite."""
 
-    def __init__(self, user_id: UserId, *, directory_id: DirectoryId) -> None:
+    def __init__(self, user_id: UserId) -> None:
         super().__init__()
         self._user_id = user_id
-        self._directory_id = directory_id
 
     def get_aggregate_id(self) -> UserId:
         return self._user_id
 
     def get_event_name(self) -> str:
         return "users.user.registered"
-
-    @property
-    def directory_id(self) -> DirectoryId:
-        return self._directory_id
 
 
 class UserRoleChanged(BaseEvent[UserId]):
