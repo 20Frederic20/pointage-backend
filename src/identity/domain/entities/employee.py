@@ -51,7 +51,7 @@ class Employee(AggregateRoot[EmployeeId]):
         role: Role = Role.EMPLOYEE,
     ) -> Self:
         """
-        Founding signup: the first employee of a brand-new workspace, an ADMIN.
+        Founding signup: the first employee of a brand-new workspace,.
         """
         employee = cls(
             employee_id,

@@ -58,3 +58,27 @@ ALTER TABLE directories ADD COLUMN IF NOT EXISTS version_id INTEGER DEFAULT 1 NO
 
 -- Ajouter la colonne version_id à users si elle n'existe pas
 ALTER TABLE users ADD COLUMN IF NOT EXISTS version_id INTEGER DEFAULT 1 NOT NULL;
+
+
+---------------------------------------------------------------------------
+
+ALTER TABLE users DROP COLUMN directory_id CASCADE;
+
+CREATE TABLE employees(
+    id VARCHAR(32) PRIMARY KEY,
+    directory_id VARCHAR(32) NOT NULL REFERENCES directories(id),
+    user_id VARCHAR(32) NOT NULL REFERENCES users(id),
+    employee_number VARCHAR(20) NOT NULL,
+    phone VARCHAR(20),
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    role VARCHAR(16) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version_id INTEGER DEFAULT 1
+)
+
+ALTER TABLE employees ADD CONSTRAINT uq_employees_employee_number UNIQUE (employee_number);
+
+CREATE INDEX ix_employees_directory_id ON employees (directory_id);
+
+CREATE INDEX ix_employees_user_id ON employees (user_id);

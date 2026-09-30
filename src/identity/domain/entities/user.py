@@ -71,6 +71,7 @@ class User(AggregateRoot[UserId]):
         *,
         email: str,
         password_hash: str,
+        role: Role = Role.EMPLOYEE,
         first_name: str | None = None,
         last_name: str | None = None,
     ) -> Self:
@@ -81,7 +82,7 @@ class User(AggregateRoot[UserId]):
             user_id,
             email=email,
             password_hash=password_hash,
-            role=Role.ADMIN,
+            role=role,
             first_name=first_name,
             last_name=last_name,
         )

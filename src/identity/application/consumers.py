@@ -63,6 +63,7 @@ class UserDeactivatedConsumer(EventHandler[UserDeactivatedNotification]):
 
 USERS_CONSUMERS: dict[type, type] = {
     DirectoryCreatedNotification: DirectoryCreatedConsumer,
+    EmployeeCreatedNotification: EmployeeCreatedConsumer,
     UserRegisteredNotification: UserRegisteredConsumer,
     UserRoleChangedNotification: UserRoleChangedConsumer,
     UserDeactivatedNotification: UserDeactivatedConsumer,

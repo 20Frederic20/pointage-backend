@@ -85,7 +85,6 @@ class UsersContainer:
             return RegisterUserHandler(
                 unit_of_work=self.unit_of_work,
                 user_repository=self.user_repository,
-                directory_repository=self.directory_repository,
                 password_hasher=self.password_hasher,
                 event_outbox=self.event_outbox,
             )

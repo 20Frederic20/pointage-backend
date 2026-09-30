@@ -13,25 +13,18 @@ Add a consuming context by binding its notification events + consumers below
 for the first real binding).
 """
 
-from collections.abc import Callable
-
 from cqrs.dispatcher.event import EventDispatcher
 from cqrs.events.map import EventMap
 
 from core.application import HandlerContainer
 from core.infrastructure.outbox import LocalMessageBroker, OutboxRelay
 from core.infrastructure.outbox.outbox_relay import SessionFactory
+from identity.application.consumers import USERS_CONSUMERS
+from identity.application.notifications import USERS_EVENT_REGISTRY
 
-# Notification event → consumer class. Empty until a context publishes
-# events worth delivering — nothing reaches the broker until a producing
-# context wires its mappers into a TransactionalOutbox.
-_EVENT_MAP: dict[type, type] = {}
-
-# Consumer class → zero-arg factory (keeps the resolver dumb).
-_CONSUMER_FACTORIES: dict[type, Callable[[], object]] = {}
-
-# Outbox event_name → notification class, for broker-side rehydration.
-_EVENT_REGISTRY: dict[str, type] = {}
+_EVENT_MAP = dict(USERS_CONSUMERS)
+_CONSUMER_FACTORIES = {c: c for c in USERS_CONSUMERS.values()}
+_EVENT_REGISTRY = dict(USERS_EVENT_REGISTRY)
 
 
 def build_outbox_worker(

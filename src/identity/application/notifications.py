@@ -124,3 +124,11 @@ USERS_EVENT_MAPPERS: dict[type, object] = {
     UserRoleChanged: to_user_role_changed,
     UserDeactivated: to_user_deactivated,
 }
+
+USERS_EVENT_REGISTRY: dict[str, type] = {
+    "users.directory.created": DirectoryCreatedNotification,
+    "users.employee.created": EmployeeCreatedNotification,
+    "users.user.registered": UserRegisteredNotification,
+    "users.user.role_changed": UserRoleChangedNotification,
+    "users.user.deactivated": UserDeactivatedNotification,
+}

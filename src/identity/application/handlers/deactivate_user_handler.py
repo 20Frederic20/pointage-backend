@@ -5,13 +5,12 @@ from collections.abc import Sequence
 from core.application import CommandHandler, IUnitOfWork
 from core.application.outbox import IEventOutbox
 from core.domain.entity import AggregateRoot
-from core.domain.errors import NotFoundError
 
 from ...domain.entities import User
 from ...domain.errors import RolePermissionDeniedError
 from ...domain.repositories import IUserRepository
 from ...domain.value_objects import Role
-from ...domain.value_objects.ids import DirectoryId, UserId
+from ...domain.value_objects.ids import UserId
 from ..commands import DeactivateUserCommand
 from ..dtos import UserDTO
 
