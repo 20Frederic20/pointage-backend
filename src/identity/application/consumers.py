@@ -13,6 +13,7 @@ from cqrs.events import EventHandler
 
 from .notifications import (
     DirectoryCreatedNotification,
+    EmployeeCreatedNotification,
     UserDeactivatedNotification,
     UserRegisteredNotification,
     UserRoleChangedNotification,
@@ -35,6 +36,13 @@ class DirectoryCreatedConsumer(
     EventHandler[DirectoryCreatedNotification]
 ):
     async def handle(self, event: DirectoryCreatedNotification) -> None:
+        _log(event)
+
+
+class EmployeeCreatedConsumer(
+    EventHandler[EmployeeCreatedNotification]
+):
+    async def handle(self, event: EmployeeCreatedNotification)  -> None:
         _log(event)
 
 

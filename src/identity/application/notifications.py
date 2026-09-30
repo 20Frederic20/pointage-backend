@@ -16,6 +16,7 @@ from core.domain.events import BaseEvent
 
 from ..domain.events import (
     DirectoryCreated,
+    EmployeeCreated,
     UserDeactivated,
     UserRegistered,
     UserRoleChanged,
@@ -26,6 +27,11 @@ USERS_TOPIC = "users"
 
 @dataclass(frozen=True)
 class DirectoryCreatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class EmployeeCreatedNotification(DCNotificationEvent[dict]):
     pass
 
 
@@ -69,6 +75,16 @@ def to_directory_created(
     )
 
 
+def to_employee_created(
+    event: EmployeeCreated
+) -> EmployeeCreatedNotification:
+    return _notification(
+        EmployeeCreatedNotification,
+        event,
+        {"employee_id": event.get_aggregate_id().value},
+    )
+
+
 def to_user_registered(event: UserRegistered) -> UserRegisteredNotification:
     return _notification(
         UserRegisteredNotification,
@@ -103,6 +119,7 @@ def to_user_deactivated(event: UserDeactivated) -> UserDeactivatedNotification:
 
 USERS_EVENT_MAPPERS: dict[type, object] = {
     DirectoryCreated: to_directory_created,
+    EmployeeCreated: to_employee_created,
     UserRegistered: to_user_registered,
     UserRoleChanged: to_user_role_changed,
     UserDeactivated: to_user_deactivated,

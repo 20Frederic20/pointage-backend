@@ -2,6 +2,7 @@
 handlers, DTOs, and integration-event plumbing."""
 
 from .commands import (
+    CreateEmployeeCommand,
     DeactivateUserCommand,
     RecordUserActivityCommand,
     RegisterUserCommand,
@@ -10,6 +11,7 @@ from .commands import (
 )
 from .consumers import (
     DirectoryCreatedConsumer,
+    EmployeeCreatedConsumer,
     UserDeactivatedConsumer,
     UserRegisteredConsumer,
     UserRoleChangedConsumer,
@@ -34,6 +36,9 @@ from .notifications import USERS_EVENT_MAPPERS
 from .ports import PasswordHasher
 from .queries import (
     GetDirectoryByIdQuery,
+    GetEmployeeByEmployeeNumberQuery,
+    GetEmployeeByIdQuery,
+    GetEmployeesQuery,
     GetUserByEmailQuery,
     GetUserByIdQuery,
     GetUsersQuery,
@@ -41,13 +46,18 @@ from .queries import (
 
 __all__ = [
     "USERS_EVENT_MAPPERS",
+    "CreateEmployeeCommand",
     "CreateInviteCommand",
     "DeactivateUserCommand",
     "DeactivateUserHandler",
     "DirectoryCreatedConsumer",
     "DirectoryDTO",
+    "EmployeeCreatedConsumer",
     "GetDirectoryByIdHandler",
     "GetDirectoryByIdQuery",
+    "GetEmployeeByEmployeeNumberQuery",
+    "GetEmployeeByIdQuery",
+    "GetEmployeesQuery",
     "GetUserByEmailHandler",
     "GetUserByEmailQuery",
     "GetUserByIdHandler",
