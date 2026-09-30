@@ -1,4 +1,4 @@
-"""Workspace routes. ``GET/PATCH /directories/me`` joins this router together
+"""Workspace routes. ``GET/PATCH /employees/me`` joins this router together
 with the auth context's guards in a later slice."""
 
 from fastapi import APIRouter, Depends, status
@@ -9,7 +9,7 @@ from identity.interface.schemas import CreateEmployeeRequest, EmployeeResponse
 
 from ..dependencies import get_users
 
-router = APIRouter(prefix="/directories", tags=["directories"])
+router = APIRouter(prefix="/employees", tags=["employees"])
 
 
 def _employee_reponse(dto) -> EmployeeResponse:

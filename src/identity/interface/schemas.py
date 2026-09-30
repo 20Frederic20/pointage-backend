@@ -83,9 +83,10 @@ class UpdateDirectoryRequest(_CamelSchema):
 
 class RoleSchema(StrEnum):
     """The wire form of a role (mirrors the domain enum's values)."""
-
-    AGENT = "AGENT"
+    EMPLOYEE = "EMPLOYEE"
     MANAGER = "MANAGER"
+    HR = "HR"
+    PAYROLL = "PAYROLL"
     ADMIN = "ADMIN"
 
 

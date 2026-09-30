@@ -3,7 +3,11 @@ from starlette.middleware.cors import CORSMiddleware
 
 from core.exceptions import register_exception_handlers
 from core.settings import AppSettings, DatabaseSettings
-from identity.interface.routers import directories_router, users_router
+from identity.interface.routers import (
+    directories_router,
+    employees_router,
+    users_router,
+)
 from lifespan import lifespan
 
 
@@ -52,6 +56,7 @@ def create_app(
 
     app.include_router(users_router)
     app.include_router(directories_router)
+    app.include_router(employees_router)
     return app
 
 
