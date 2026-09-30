@@ -3,9 +3,13 @@
 from .dependencies import get_users
 from .schemas import (
     ChangeRoleRequest,
+    CreateEmployeeRequest,
     DirectoryResponse,
+    EmployeeListResponse,
+    EmployeeResponse,
     RegisterRequest,
     UpdateDirectoryRequest,
+    UpdateEmployeeRequest,
     UpdateProfileRequest,
     UserListResponse,
     UserResponse,
@@ -13,9 +17,13 @@ from .schemas import (
 
 __all__ = [
     "ChangeRoleRequest",
+    "CreateEmployeeRequest",
     "DirectoryResponse",
+    "EmployeeListResponse",
+    "EmployeeResponse",
     "RegisterRequest",
     "UpdateDirectoryRequest",
+    "UpdateEmployeeRequest",
     "UpdateProfileRequest",
     "UserListResponse",
     "UserResponse",

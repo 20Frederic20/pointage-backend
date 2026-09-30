@@ -25,7 +25,7 @@ def _directory_reponse(dto) -> DirectoryResponse:
 )
 async def create(
     payload: CreateDirectoryRequest,
-    users: UsersContainer = Depends(get_users),
+    users: UsersContainer = Depends(get_users),  # noqa: B008
 ) -> DirectoryResponse:
     dto = await users.send(
         CreateDirectoryCommand(

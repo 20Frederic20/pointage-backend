@@ -32,7 +32,7 @@ def _user_response(dto) -> UserResponse:
 )
 async def register(
     payload: RegisterRequest,
-    users: UsersContainer = Depends(get_users),
+    users: UsersContainer = Depends(get_users),  # noqa: B008
 ) -> UserResponse:
     """Bootstrap signup: create the first workspace and its ADMIN.
 

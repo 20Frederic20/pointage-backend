@@ -18,11 +18,14 @@ from .consumers import (
 )
 from .dtos import (
     DirectoryDTO,
+    EmployeeDTO,
+    EmployeesPageDTO,
     UserCredentialsDTO,
     UserDTO,
     UsersPageDTO,
 )
 from .handlers import (
+    CreateEmployeeHandler,
     DeactivateUserHandler,
     GetDirectoryByIdHandler,
     GetUserByEmailHandler,
@@ -47,12 +50,15 @@ from .queries import (
 __all__ = [
     "USERS_EVENT_MAPPERS",
     "CreateEmployeeCommand",
+    "CreateEmployeeHandler",
     "CreateInviteCommand",
     "DeactivateUserCommand",
     "DeactivateUserHandler",
     "DirectoryCreatedConsumer",
     "DirectoryDTO",
     "EmployeeCreatedConsumer",
+    "EmployeeDTO",
+    "EmployeesPageDTO",
     "GetDirectoryByIdHandler",
     "GetDirectoryByIdQuery",
     "GetEmployeeByEmployeeNumberQuery",

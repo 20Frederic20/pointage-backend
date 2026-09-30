@@ -1,3 +1,4 @@
+from .create_employee_handler import CreateEmployeeHandler
 from .deactivate_user_handler import DeactivateUserHandler
 from .get_directory_by_id_handler import GetDirectoryByIdHandler
 from .get_user_by_email_handler import GetUserByEmailHandler
@@ -8,6 +9,7 @@ from .register_user_handler import RegisterUserHandler
 from .update_user_profile_handler import UpdateUserProfileHandler
 
 __all__ = [
+    "CreateEmployeeHandler",
     "DeactivateUserHandler",
     "GetDirectoryByIdHandler",
     "GetUserByEmailHandler",
