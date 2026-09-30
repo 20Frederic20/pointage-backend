@@ -1,0 +1,39 @@
+from dataclasses import dataclass
+from datetime import datetime
+
+from core.application import DTO
+from identity.domain import Role
+from identity.domain.entities import Employee
+
+
+@dataclass(frozen=True)
+class EmployeeDTO(DTO):
+    id: str
+    user_id: str
+    directory_id: str
+    employee_number: str
+    role: Role
+    is_active: bool
+    phone: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    @classmethod
+    def from_aggregate(cls, employee: Employee) -> "EmployeeDTO":
+        return cls(
+            id=employee.id.value,
+            user_id=employee.user_id.value,
+            role=employee.role,
+            is_active=employee.is_active,
+            directory_id=employee.directory_id.value,
+            phone=employee.phone,
+            employee_number=employee.employee_number,
+            created_at=employee.created_at,
+            updated_at=employee.updated_at,
+        )
+
+
+@dataclass(frozen=True)
+class EmployeesPageDTO(DTO):
+    items: tuple[EmployeeDTO, ...]
+    total: int
