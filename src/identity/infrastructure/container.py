@@ -24,9 +24,12 @@ from identity.application.commands.create_directory import CreateDirectoryComman
 from identity.application.handlers.create_directory_handler import (
     CreateDirectoryHandler,
 )
+from identity.infrastructure.persistence.employee_repository import EmployeeRepository
 
 from ..application import (
     USERS_EVENT_MAPPERS,
+    CreateEmployeeCommand,
+    CreateEmployeeHandler,
     DeactivateUserCommand,
     DeactivateUserHandler,
     GetDirectoryByIdHandler,
@@ -55,6 +58,7 @@ class UsersContainer:
 
     user_repository: UserRepository
     directory_repository: DirectoryRepository
+    employee_repository: EmployeeRepository
     unit_of_work: IUnitOfWork
     event_bus: IEventBus[BaseEvent]
     password_hasher: PasswordHasher
@@ -64,6 +68,7 @@ class UsersContainer:
     def __post_init__(self) -> None:
         request_map = RequestMap()
         request_map.bind(CreateDirectoryCommand, CreateDirectoryHandler)
+        request_map.bind(CreateEmployeeCommand, CreateEmployeeHandler)
         request_map.bind(RegisterUserCommand, RegisterUserHandler)
         request_map.bind(UpdateUserProfileCommand, UpdateUserProfileHandler)
         request_map.bind(DeactivateUserCommand, DeactivateUserHandler)
@@ -102,6 +107,12 @@ class UsersContainer:
             return CreateDirectoryHandler(
                 unit_of_work=self.unit_of_work,
                 directory_repository=self.directory_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is CreateEmployeeHandler:
+            return CreateEmployeeHandler(
+                unit_of_work=self.unit_of_work,
+                employee_repository=self.employee_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is GetUserByEmailHandler:

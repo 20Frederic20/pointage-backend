@@ -9,7 +9,7 @@ class UserId(EntityId[Literal["user"]]):
     """Identity of a directory member."""
 
 
-class EmployeeId(EntityId[Literal["user"]]):
+class EmployeeId(EntityId[Literal["employee"]]):
     """Identity of a directory member."""
 
 
