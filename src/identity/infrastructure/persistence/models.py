@@ -4,7 +4,7 @@ from datetime import datetime
 
 from geoalchemy2 import Geography
 from shapely.geometry import Point
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -45,3 +45,23 @@ class UserModel(BaseModel):
     last_active_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class EmployeeModel(BaseModel):
+    __tablename__ = "employees"
+
+    role: Mapped[Role] = mapped_column(
+        SAEnum(Role, native_enum=False, length=16), nullable=False
+    )
+    employee_number: Mapped[str] = mapped_column(String(32))
+    phone: Mapped[str | None] = mapped_column(String(20))
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("users.id"), nullable=False, index=True
+    )
+    directory_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("users.id"), nullable=False, index=True
+    )
+

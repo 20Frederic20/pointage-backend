@@ -3,7 +3,7 @@ from identity.domain import Role
 from identity.domain.entities import Employee
 
 
-class EmployeeEmployeeNumberrIs(Specification[Employee]):
+class EmployeeEmployeeNumberIs(Specification[Employee]):
     __slots__ = ("_employee_number",)
 
     def __init__(self, employee_number: str) -> None:

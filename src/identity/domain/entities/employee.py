@@ -86,25 +86,25 @@ class Employee(AggregateRoot[EmployeeId]):
         self.touch()
 
     @property
-    def user_id(self):
+    def user_id(self) -> UserId:
         return self._user_id
 
     @property
-    def directory_id(self):
+    def directory_id(self) -> DirectoryId:
         return self._directory_id
 
     @property
-    def employee_number(self):
+    def employee_number(self) -> str:
         return self._employee_number
 
     @property
-    def is_active(self):
+    def is_active(self) -> bool:
         return self._is_active
 
     @property
-    def role(self):
+    def role(self) -> str:
         return self._role
 
     @property
-    def phone(self):
+    def phone(self) -> str | None:
         return self._phone

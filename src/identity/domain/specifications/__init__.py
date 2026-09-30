@@ -1,4 +1,9 @@
 
+from .employee_specifications import (
+    EmployeeEmployeeNumberIs,
+    EmployeeIsActiveIs,
+    EmployeeRoleIs,
+)
 from .user_specifications import (
     UserEmailIs,
     UserIsActiveIs,
@@ -6,6 +11,9 @@ from .user_specifications import (
 )
 
 __all__ = [
+    "EmployeeEmployeeNumberIs",
+    "EmployeeIsActiveIs",
+    "EmployeeRoleIs",
     "UserEmailIs",
     "UserIsActiveIs",
     "UserRoleIs",
