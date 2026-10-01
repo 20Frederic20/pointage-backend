@@ -7,7 +7,7 @@ from punch.domain.entities import TimeEntry
 from punch.domain.value_objects import EntryType
 
 
-class TimeEntryRepository(IRepository[TimeEntry, TimeEntryId]):
+class ITimeEntryRepository(IRepository[TimeEntry, TimeEntryId]):
 
     async def exists_by_employee_id_and_occured_at(self, employee_id: EmployeeId, occured_at: datetime) -> bool:
         ...

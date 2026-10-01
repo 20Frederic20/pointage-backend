@@ -31,7 +31,7 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         location: Location,
         location_confidence: LocationConfidence = LocationConfidence.MEDIUM,
         source: EntrySource = EntrySource.MOBILE,
-        idempotency_key: str,
+        idempotency_key: str | None = None,
         wifi_identifier: str | None = None,
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
@@ -44,7 +44,8 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         self._employee_id = employee_id,
         self._entry_type = entry_type,
         self._occured_at = occured_at,
-        self._location_confidence = location_confidence
+        self._location = location,
+        self._location_confidence = location_confidence,
         self._wifi_identifier = wifi_identifier
         self._source = source
         self._idempotency_key = idempotency_key
@@ -103,6 +104,18 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
     @property
     def location_confidence(self) -> str:
         return self._location_confidence
+
+    @property
+    def location(self) -> Location:
+        return self._location
+
+    @property
+    def source(self) -> EntrySource:
+        return self._source
+
+    @property
+    def idempotency_key(self) -> str | None:
+        return self._idempotency_key
 
     @property
     def wifi_identifier(self) -> str | None:

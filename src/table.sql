@@ -82,3 +82,27 @@ ALTER TABLE employees ADD CONSTRAINT uq_employees_employee_number UNIQUE (employ
 CREATE INDEX ix_employees_directory_id ON employees (directory_id);
 
 CREATE INDEX ix_employees_user_id ON employees (user_id);
+
+---------------------------------------------------------------------------
+
+-- Création de la table time_entries
+CREATE TABLE time_entries (
+    id VARCHAR(32) PRIMARY KEY,
+    employee_id VARCHAR(32) NOT NULL REFERENCES employees(id),
+    entry_type VARCHAR(16) NOT NULL,
+    occured_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    location GEOGRAPHY(POINT, 4326) NOT NULL,
+    location_confidence VARCHAR(16) NOT NULL,
+    source VARCHAR(16) NOT NULL,
+    idempotency_key VARCHAR(255) NOT NULL,
+    wifi_identifier VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    version_id INTEGER DEFAULT 1 NOT NULL
+);
+
+-- Index pour optimiser les recherches par employé (recommandé pour les clés étrangères)
+CREATE INDEX ix_time_entries_employee_id ON time_entries (employee_id);
+
+-- Index optionnel mais conseillé sur l'idempotency_key si vous faites des recherches fréquentes dessus
+CREATE INDEX ix_time_entries_idempotency_key ON time_entries (idempotency_key);
