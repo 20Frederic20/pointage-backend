@@ -12,6 +12,8 @@ def _utcnow() -> datetime:
 
 class Employee(AggregateRoot[EmployeeId]):
 
+    __slots__ = ("_directory_id", "_employee_number", "_is_active", "_phone", "_role", "_user_id")
+
     def __init__ (
         self,
         employee_id: EmployeeId,
