@@ -21,10 +21,23 @@ from core.infrastructure.outbox import LocalMessageBroker, OutboxRelay
 from core.infrastructure.outbox.outbox_relay import SessionFactory
 from identity.application.consumers import USERS_CONSUMERS
 from identity.application.notifications import USERS_EVENT_REGISTRY
+from punch.application.consumers import PUNCHES_CONSUMERS
+from punch.application.notifications import PUNCHES_EVENT_REGISTRY
 
-_EVENT_MAP = dict(USERS_CONSUMERS)
-_CONSUMER_FACTORIES = {c: c for c in USERS_CONSUMERS.values()}
-_EVENT_REGISTRY = dict(USERS_EVENT_REGISTRY)
+_EVENT_MAP = {
+    **USERS_CONSUMERS,
+    **PUNCHES_CONSUMERS,
+}
+
+_CONSUMER_FACTORIES = {
+    consumer_type: consumer_type
+    for consumer_type in _EVENT_MAP.values()
+}
+
+_EVENT_REGISTRY = {
+    **USERS_EVENT_REGISTRY,
+    **PUNCHES_EVENT_REGISTRY,
+}
 
 
 def build_outbox_worker(

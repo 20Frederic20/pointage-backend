@@ -12,4 +12,4 @@ class TimeEntryCreated(BaseEvent[TimeEntryId]):
         return self._time_entry_id
 
     def get_event_name(self) -> str:
-        return "punch.time_entry.created"
+        return "punchs.time_entry.created"

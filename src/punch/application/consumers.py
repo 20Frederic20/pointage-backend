@@ -24,6 +24,6 @@ class TimeEntryCreatedConsumer(
         _log(event)
 
 
-PUNCHES_CONSUMER: dict[type, type] = {
+PUNCHES_CONSUMERS: dict[type, type] = {
     TimeEntryCreatedNotification: TimeEntryCreatedConsumer,
 }

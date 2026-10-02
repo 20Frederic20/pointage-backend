@@ -28,8 +28,8 @@ class TimeEntryResponse(_CamelSchema):
     employee_id: str
     entry_type: str
     source: EntrySource
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
     location_confidence: LocationConfidence | None = None
     idempotency_key: str | None = None
     wifi_identifier: str | None = None

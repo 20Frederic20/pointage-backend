@@ -17,6 +17,7 @@ class TimeEntryDTO(DTO):
     source: EntrySource
     created_at: datetime
     updated_at: datetime
+    occured_at: datetime | None = None
     idempotency_key: str | None = None
     wifi_identifier: str | None = None
 
@@ -31,6 +32,7 @@ class TimeEntryDTO(DTO):
             source=time_entry.source,
             idempotency_key=time_entry.idempotency_key,
             wifi_identifier=time_entry.wifi_identifier,
+            occured_at=time_entry.occured_at,
             created_at=time_entry.created_at,
             updated_at=time_entry.updated_at,
         )
