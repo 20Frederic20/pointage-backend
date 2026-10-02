@@ -9,6 +9,7 @@ from identity.interface.routers import (
     users_router,
 )
 from lifespan import lifespan
+from punch.interface.routers import time_entries_router
 
 
 def cors_config(allow_origins: list[str]) -> tuple[list[str], bool]:
@@ -57,6 +58,7 @@ def create_app(
     app.include_router(users_router)
     app.include_router(directories_router)
     app.include_router(employees_router)
+    app.include_router(time_entries_router)
     return app
 
 
