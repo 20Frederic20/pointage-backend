@@ -1,4 +1,4 @@
-"""Workspace routes. ``GET/PATCH /employees/me`` joins this router together
+"""Workspace routes. ``GET/PATCH /employees/me`` joins this routers together
 with the auth context's guards in a later slice."""
 
 from fastapi import APIRouter, Depends, status

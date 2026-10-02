@@ -1,7 +1,7 @@
 """User-facing routes: bootstrap signup and invite redemption (public).
 
 The authenticated routes (listing, profiles, role changes, deactivation)
-join this router with the auth context's guards in a later slice — see the
+join this routers with the auth context's guards in a later slice — see the
 route table in ``social_crm_ddd_architecture.md``.
 """
 
