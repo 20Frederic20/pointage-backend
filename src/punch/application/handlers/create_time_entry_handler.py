@@ -27,9 +27,9 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         self.employee_repository = employee_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
-        employee: Employee = self.employee_repository.find_by_employee_number(request.employee_number)
+        employee: Employee = await self.employee_repository.find_by_employee_number(request.employee_number)
         location_confidence = "HIGH" if request.location and request.wifi_identifier else "MEDIUM"
-        time_entry = await TimeEntry.create(
+        time_entry = TimeEntry.create(
             time_entry_id=TimeEntryId.generate(),
             employee_id=employee.id,
             entry_type=request.entry_type,

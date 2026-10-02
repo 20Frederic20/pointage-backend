@@ -56,7 +56,6 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         time_entry_id: TimeEntryId,
         *,
         employee_id: EmployeeId,
-        occured_at: datetime,
         entry_type: EntryType,
         location: Location,
         wifi_identifier: str | None = None,
@@ -70,7 +69,7 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         time_entry = cls(
             time_entry_id,
             employee_id=employee_id,
-            occured_at=occured_at,
+            occured_at=_utcnow(),
             location_confidence=location_confidence,
             entry_type=entry_type,
             location=location,
