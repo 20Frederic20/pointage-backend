@@ -73,10 +73,10 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         employee_id: EmployeeId,
         entry_type: EntryType,
         location: Location,
-        wifi_identifier: str | None = None,
         location_confidence: LocationConfidence = LocationConfidence.MEDIUM,
         source: EntrySource = EntrySource.MOBILE,
-        idempotency_key: str,
+        wifi_identifier: str | None = None,
+        idempotency_key: str | None = None,
     ) -> Self:
         """
         :param time_entry_id:

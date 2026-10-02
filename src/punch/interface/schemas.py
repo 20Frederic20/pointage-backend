@@ -14,6 +14,7 @@ class CreateTimeEntryRequest(_CamelSchema):
     employee_number: str
     longitude: float
     latitude: float
+    entry_type: str
     source: EntrySource
     idempotency_key: str
     wifi_identifier: str | None = None

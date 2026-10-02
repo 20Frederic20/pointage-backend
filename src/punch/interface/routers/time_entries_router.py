@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from identity.domain.value_objects.location import Location
 from punch.application.commands import CreateTimeEntryCommand
+from punch.domain import EntryType, LocationConfidence
 from punch.infrastructure import PunchesContainer
 from punch.interface import TimeEntryResponse, CreateTimeEntryRequest, get_punches
 
@@ -28,9 +29,10 @@ async def create_time_entry(
             employee_number=payload.employee_number,
             location=Location(payload.longitude, payload.latitude),
             source=payload.source,
+            entry_type=EntryType(payload.entry_type),
             idempotency_key=payload.idempotency_key,
             wifi_identifier=payload.wifi_identifier,
-            location_confidence=payload.location_confidence
+            location_confidence=LocationConfidence(payload.location_confidence)
         )
     )
 

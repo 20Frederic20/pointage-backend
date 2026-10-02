@@ -17,6 +17,4 @@ def get_punches(
     return build_punches_container(
         session=session,
         event_bus=request.app.state.container.event_bus,
-        unit_of_work=request.app.state.container.unit_of_work,
-        event_outbox=request.app.state.container.event_outbox
     )

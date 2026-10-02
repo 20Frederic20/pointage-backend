@@ -12,7 +12,7 @@ def _utcnow() -> datetime:
 
 class Employee(AggregateRoot[EmployeeId]):
 
-    __slots__ = ("_directory_id", "_employee_number", "_is_active", "_phone", "_role", "_user_id")
+    __slots__ = ("_directory_id", "_employee_number", "_is_active", "_phone", "_role", "_user_id", "_employee_id",)
 
     def __init__ (
         self,
@@ -32,10 +32,10 @@ class Employee(AggregateRoot[EmployeeId]):
             employee_id, created_at=created_at, updated_at=updated_at,
             version=version
         )
-        self._user_id = user_id,
-        self._employee_id  = employee_id,
-        self._employee_number = employee_number,
-        self._directory_id = directory_id,
+        self._user_id = user_id
+        self._employee_id  = employee_id
+        self._employee_number = employee_number
+        self._directory_id = directory_id
         self._role = role
         self._is_active =  is_active
         self._phone = phone
@@ -83,10 +83,6 @@ class Employee(AggregateRoot[EmployeeId]):
             self._phone = phone
         self.touch()
 
-    def record_activity(self) -> None:
-        self._last_active_at = _utcnow()
-        self.touch()
-
     @property
     def user_id(self) -> UserId:
         return self._user_id
@@ -104,7 +100,7 @@ class Employee(AggregateRoot[EmployeeId]):
         return self._is_active
 
     @property
-    def role(self) -> str:
+    def role(self) -> Role:
         return self._role
 
     @property

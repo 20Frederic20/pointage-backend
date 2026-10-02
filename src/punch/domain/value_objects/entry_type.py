@@ -3,5 +3,5 @@ from enum import StrEnum
 
 class EntryType(StrEnum):
 
-    ENTRY = "ENTRY"
-    EXIT = "EXIT"
+    IN = "IN"
+    OUT = "OUT"
