@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict
 
-from core.infrastructure.database import BaseModel
 from punch.domain import EntrySource, LocationConfidence
 
 
@@ -17,19 +16,25 @@ class CreateTimeEntryRequest(_CamelSchema):
     latitude: float
     source: EntrySource
     idempotency_key: str
-    wifi_identifier: str
-    location_confidence: LocationConfidence
+    wifi_identifier: str | None = None
+    location_confidence: LocationConfidence | None = None
 
 
-class CreateTimeEntryResponse(_CamelSchema):
+class TimeEntryResponse(_CamelSchema):
 
     id: str
     occured_at: datetime
     employee_id: str
     entry_type: str
-    location_confidence: LocationConfidence
     source: EntrySource
     created_at: str
     updated_at: str
+    location_confidence: LocationConfidence | None = None
     idempotency_key: str | None = None
     wifi_identifier: str | None = None
+
+
+class TimeEntryListResponse(_CamelSchema):
+
+    time_entries: list[TimeEntryResponse]
+    total: int

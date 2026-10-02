@@ -1,6 +1,8 @@
-from dataclasses import field
+from dataclasses import field, dataclass
 
 from cqrs.requests.map import RequestMap
+from sqlalchemy.ext.asyncio import AsyncSession
+from core.infrastructure.database import SQLAlchemyUnitOfWork
 
 from core.application import ApplicationMediator, HandlerContainer, IUnitOfWork
 from core.domain.events import BaseEvent, IEventBus
@@ -8,10 +10,12 @@ from core.infrastructure.events import EventBusEmitter
 from core.infrastructure.outbox import TransactionalOutbox
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.handlers.create_time_entry_handler import CreateTimeEntryHandler
+from punch.application.notifications import PUNCHES_EVENT_MAPPERS
 from punch.infrastructure.persistence.time_entry_repository import TimeEntryRepository
 
 
-class PunchContainer:
+@dataclass
+class PunchesContainer:
     """Request-scope wiring for the punch bounded context."""
 
     time_entry_repository: TimeEntryRepository
@@ -41,3 +45,23 @@ class PunchContainer:
         raise TypeError(
             f"No punch-scope wiring for handler {handler_type.__name__}"
         )
+
+    async def send(self, request):
+        """Dispatch a users command/query and return its result."""
+        return await self._mediator.send(request)
+
+
+def build_punches_container(
+    *,
+    session: AsyncSession,
+    unit_of_work: IUnitOfWork,
+    event_bus: IEventBus[BaseEvent],
+    event_outbox: TransactionalOutbox | None = None,
+) -> PunchesContainer:
+    """Build a request-scoped punch container."""
+    return PunchesContainer(
+        time_entry_repository=TimeEntryRepository(session),
+        unit_of_work=SQLAlchemyUnitOfWork(session),
+        event_bus=event_bus,
+        event_outbox=TransactionalOutbox(session=session, mappers=PUNCHES_EVENT_MAPPERS),
+    )
