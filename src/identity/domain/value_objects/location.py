@@ -39,15 +39,35 @@ class Location:
         }
 
     @classmethod
-    def from_wkt(cls, wkt_str: str, srid: int = 4326) -> "Location":
+    def from_wkt(cls, wkt_str: any, srid: int = 4326) -> "Location":
         """
-        Crée un objet Location à partir d'une chaîne WKT (ex: 'POINT(6.43 5.32)').
+        Crée un objet Location à partir d'un WKT, d'un objet GeoAlchemy2 ou d'une chaîne WKB hexadécimale.
         """
-        # Nettoyage simple de la chaîne WKT
-        coords_str = wkt_str.replace("POINT", "").strip(" ()")
+        # 1. Si c'est un objet GeoAlchemy2 (WKBElement)
+        if hasattr(wkt_str, "desc") or type(wkt_str).__name__ == "WKBElement":
+            try:
+                from geoalchemy2.shape import to_shape
+                geom = to_shape(wkt_str)
+                return cls(latitude=geom.y, longitude=geom.x, srid=srid)
+            except ImportError:
+                pass
+
+        text_val = str(wkt_str).strip()
+
+        # 2. Si c'est une chaîne hexadécimale WKB/EWKB (ex: '0101000000...')
+        if text_val.startswith("01") and all(c in "0123456789abcdefABCDEF" for c in text_val):
+            try:
+                from shapely import wkb
+                geom = wkb.loads(bytes.fromhex(text_val))
+                return cls(latitude=geom.y, longitude=geom.x, srid=srid)
+            except Exception:
+                pass
+
+        # 3. Format WKT classique ('POINT (lon lat)')
+        coords_str = text_val.replace("POINT", "").replace("point", "").strip(" ()")
         parts = coords_str.split()
         if len(parts) != 2:
-            raise ValueError(f"Format WKT invalide pour un Point : {wkt_str}")
+            raise ValueError(f"Format de localisation invalide : {wkt_str}")
 
         # Rappel : WKT stocke (Longitude Latitude)
         longitude = float(parts[0])
