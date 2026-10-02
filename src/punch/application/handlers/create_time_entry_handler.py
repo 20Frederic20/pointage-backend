@@ -9,6 +9,7 @@ from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
 from punch.domain import TimeEntryId, LocationConfidence
 from punch.domain.entities import TimeEntry
+from punch.domain.errors import EmployeeHasAlreadyPunchedThisTypeOfEntryError
 from punch.domain.repositories import ITimeEntryRepository
 
 
@@ -31,6 +32,11 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         employee: Employee | None = await self.employee_repository.find_by_employee_number(request.employee_number)
         if not employee:
             raise NotFoundError(f"Employee with number {request.employee_number} not found")
+
+        last_entry: TimeEntry | None = await self.time_entry_repository.find_last_by_employee_id(employee.id)
+        if last_entry and last_entry.entry_type == request.entry_type:
+            raise EmployeeHasAlreadyPunchedThisTypeOfEntryError(f"Employee {employee.id} already has a time entry of type {request.entry_type}")
+
         location_confidence = (
             LocationConfidence("HIGH")
             if request.location and request.wifi_identifier

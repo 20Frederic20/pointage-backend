@@ -1,3 +1,3 @@
-from .errors import PunchAlreadyExistsError
+from .errors import PunchAlreadyExistsError, EmployeeHasAlreadyPunchedThisTypeOfEntryError
 
-__all__ = ["PunchAlreadyExistsError"]
+__all__ = ["EmployeeHasAlreadyPunchedThisTypeOfEntryError", "PunchAlreadyExistsError"]

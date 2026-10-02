@@ -19,7 +19,7 @@ from .models import TimeEntryModel
 
 def _to_aggregate(row) -> TimeEntry:
 
-    location = Location(row.location)
+    location = Location.from_wkt(row.location)
     return TimeEntry(
         TimeEntryId(row.id),
         employee_id=EmployeeId(row.employee_id),
