@@ -56,11 +56,11 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
             time_entry_id, created_at=created_at, updated_at=updated_at,
             version=version
         )
-        self._employee_id = employee_id,
-        self._entry_type = entry_type,
-        self._occured_at = occured_at,
-        self._location = location,
-        self._location_confidence = location_confidence,
+        self._employee_id = employee_id
+        self._entry_type = entry_type
+        self._occured_at = occured_at
+        self._location = location
+        self._location_confidence = location_confidence
         self._wifi_identifier = wifi_identifier
         self._source = source
         self._idempotency_key = idempotency_key
