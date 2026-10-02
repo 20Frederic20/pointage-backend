@@ -19,7 +19,7 @@ def _utcnow() -> datetime:
 
 class TimeEntry(AggregateRoot[TimeEntryId]):
 
-    __slots__ = ("_employee_id", "_entry_type", "_idempotency_key", "_is_active", "_location_confidence", "_occured_at", "_source", "_wifi_identifier")
+    __slots__ = ("_employee_id", "_entry_type", "_idempotency_key", "_is_active", "_location_confidence", "_occured_at", "_source", "_wifi_identifier", "_location")
 
     def __init__ (
         self,
@@ -80,10 +80,6 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         )
         time_entry.record_event(TimeEntryCreated(time_entry_id))
         return time_entry
-
-    def record_activity(self) -> None:
-        self._last_active_at = _utcnow()
-        self.touch()
 
     @property
     def employee_id(self) -> EmployeeId:

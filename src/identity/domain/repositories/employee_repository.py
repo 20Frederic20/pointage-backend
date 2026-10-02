@@ -10,3 +10,7 @@ class IEmployeeRepository(IRepository[Employee, EmployeeId]):
     @abstractmethod
     async def exists_by_employee_number(self, employee_nnumber):
         ...
+
+    @abstractmethod
+    async def find_by_employee_number(self, employee_number):
+        ...

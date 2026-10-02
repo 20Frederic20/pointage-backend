@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 from core.application import Command
-from identity.domain import EmployeeId
 from identity.domain.value_objects.location import Location
 from punch.domain import EntrySource, EntryType, LocationConfidence
 
@@ -10,7 +9,7 @@ from punch.domain import EntrySource, EntryType, LocationConfidence
 class CreateTimeEntryCommand(Command):
     """Create a new time entry."""
 
-    employee_id: EmployeeId
+    employee_number: str
     entry_type: EntryType
     location: Location
     location_confidence: LocationConfidence

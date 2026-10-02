@@ -2,7 +2,8 @@ from collections.abc import Sequence
 
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.domain.entity import AggregateRoot
-from identity.domain import EmployeeId
+from identity.domain.entities import Employee
+from identity.domain.repositories import IEmployeeRepository
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
 from punch.domain import TimeEntryId
@@ -18,18 +19,22 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         *,
         unit_of_work: IUnitOfWork,
         time_entry_repository: ITimeEntryRepository,
+        employee_repository: IEmployeeRepository,
         event_outbox: IEventOutbox | None = None,
     ) -> None:
         super().__init__(unit_of_work=unit_of_work, event_outbox=event_outbox)
         self.time_entry_repository = time_entry_repository
+        self.employee_repository = employee_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
+        employee: Employee = self.employee_repository.find_by_employee_number(request.employee_number)
+        location_confidence = "HIGH" if request.location and request.wifi_identifier else "MEDIUM"
         time_entry = await TimeEntry.create(
             time_entry_id=TimeEntryId.generate(),
-            employee_id=EmployeeId(request.employee_id),
+            employee_id=employee.id,
             entry_type=request.entry_type,
             location=request.location,
-            location_confidence=request.location_confidence,
+            location_confidence=location_confidence,
             source=request.source,
             idempotency_key=request.idempotency_key,
             wifi_identifier=request.wifi_identifier,
