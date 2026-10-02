@@ -14,3 +14,6 @@ class ITimeEntryRepository(IRepository[TimeEntry, TimeEntryId]):
 
     async def exists_by_employee_id_and_entry_type(self, employee_id: EmployeeId, entry_type: EntryType) -> bool:
         ...
+
+    async def find_last_by_employee_id(self, employee_id: EmployeeId) -> TimeEntry | None:
+        ...

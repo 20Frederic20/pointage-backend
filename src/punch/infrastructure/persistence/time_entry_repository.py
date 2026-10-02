@@ -17,6 +17,25 @@ from ...domain.value_objects.ids import TimeEntryId
 from .models import TimeEntryModel
 
 
+def _to_aggregate(row) -> TimeEntry:
+
+    location = Location(row.location)
+    return TimeEntry(
+        TimeEntryId(row.id),
+        employee_id=EmployeeId(row.employee_id),
+        occured_at=row.occured_at,
+        entry_type=row.entry_type,
+        location=location,
+        location_confidence=row.location_confidence,
+        source=row.source,
+        idempotency_key=row.idempotency_key,
+        wifi_identifier=row.wifi_identifier or None,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+        version=row.version_id,
+    )
+
+
 class TimeEntryRepository(ITimeEntryRepository):
     """Same versioned save protocol as :class:`UserRepository`."""
 
@@ -30,7 +49,7 @@ class TimeEntryRepository(ITimeEntryRepository):
                 f"TimeEntry {time_entry_id} not found",
                 context=time_entry_id.value,
             )
-        return self._to_aggregate(row)
+        return _to_aggregate(row)
 
     async def exists(self, time_entry_id: TimeEntryId) -> bool:
         row = await self._session.scalar(
@@ -61,6 +80,15 @@ class TimeEntryRepository(ITimeEntryRepository):
             ).limit(1)
         )
         return row is not None
+
+    async def find_last_by_employee_id(self, employee_id: EmployeeId) -> TimeEntry | None:
+        row = await self._session.scalar(
+            select(TimeEntryModel)
+            .where(TimeEntryModel.employee_id == employee_id.value)
+            .order_by(TimeEntryModel.occured_at.desc())
+            .limit(1)
+        )
+        return _to_aggregate(row) if row is not None else None
 
     async def save(self, time_entry: TimeEntry) -> None:
         if time_entry.version == 0:
@@ -95,21 +123,3 @@ class TimeEntryRepository(ITimeEntryRepository):
                 f"TimeEntry {time_entry.id} already exists",
                 context=time_entry.id.value,
             ) from exc
-
-    def _to_aggregate(self, row) -> TimeEntry:
-
-        location = Location(row.location)
-        return TimeEntry(
-            TimeEntryId(row.id),
-            employee_id=EmployeeId(row.employee_id),
-            occured_at=row.occured_at,
-            entry_type=row.entry_type,
-            location=location,
-            location_confidence=row.location_confidence,
-            source=row.source,
-            idempotency_key=row.idempotency_key,
-            wifi_identifier=row.wifi_identifier or None,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
-            version=row.version,
-        )

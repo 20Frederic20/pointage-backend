@@ -31,7 +31,11 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         employee: Employee | None = await self.employee_repository.find_by_employee_number(request.employee_number)
         if not employee:
             raise NotFoundError(f"Employee with number {request.employee_number} not found")
-        location_confidence = LocationConfidence("HIGH") if request.location and request.wifi_identifier else LocationConfidence("MEDIUM")
+        location_confidence = (
+            LocationConfidence("HIGH")
+            if request.location and request.wifi_identifier
+            else LocationConfidence("MEDIUM")
+        )
         time_entry = TimeEntry.create(
             time_entry_id=TimeEntryId.generate(),
             employee_id=employee.id,
