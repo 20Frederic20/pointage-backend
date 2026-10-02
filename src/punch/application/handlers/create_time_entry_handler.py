@@ -3,14 +3,15 @@ from collections.abc import Sequence
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.domain.entity import AggregateRoot
 from core.domain.errors import NotFoundError
-from identity.domain.entities import Employee
-from identity.domain.repositories import IEmployeeRepository
+from identity.domain.entities import Employee, Directory
+from identity.domain.repositories import IEmployeeRepository, IDirectoryRepository
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
 from punch.domain import TimeEntryId, LocationConfidence
 from punch.domain.entities import TimeEntry
 from punch.domain.errors import EmployeeHasAlreadyPunchedThisTypeOfEntryError
 from punch.domain.repositories import ITimeEntryRepository
+from punch.domain.services.distance_calculator import DistanceCalculator
 
 
 class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO]):
@@ -22,20 +23,37 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         unit_of_work: IUnitOfWork,
         time_entry_repository: ITimeEntryRepository,
         employee_repository: IEmployeeRepository,
+        directory_repository: IDirectoryRepository,
         event_outbox: IEventOutbox | None = None,
     ) -> None:
         super().__init__(unit_of_work=unit_of_work, event_outbox=event_outbox)
         self.time_entry_repository = time_entry_repository
         self.employee_repository = employee_repository
+        self.directory_repository = directory_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
         employee: Employee | None = await self.employee_repository.find_by_employee_number(request.employee_number)
         if not employee:
             raise NotFoundError(f"Employee with number {request.employee_number} not found")
 
+        directory: Directory | None = await self.directory_repository.get_by_id(employee.directory_id)
+        if not directory:
+            raise NotFoundError(f"Directory with id {employee.directory_id} not found")
+
+        distance = DistanceCalculator.calculate(
+            latitude_1=request.location.latitude,
+            longitude_1=request.location.longitude,
+            latitude_2=directory.location.latitude,
+            longitude_2=directory.location.longitude,
+        )
+
+        if distance > 100:
+            raise ValueError(f"Employee {employee.id} is too far from the directory location: {distance} meters")
+
         last_entry: TimeEntry | None = await self.time_entry_repository.find_last_by_employee_id(employee.id)
         if last_entry and last_entry.entry_type == request.entry_type:
             raise EmployeeHasAlreadyPunchedThisTypeOfEntryError(f"Employee {employee.id} already has a time entry of type {request.entry_type}")
+
 
         location_confidence = (
             LocationConfidence("HIGH")
