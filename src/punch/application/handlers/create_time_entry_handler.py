@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from core.application import CommandHandler
+from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.domain.entity import AggregateRoot
 from identity.domain import EmployeeId
 from punch.application.commands import CreateTimeEntryCommand
@@ -13,7 +13,14 @@ from punch.domain.repositories import ITimeEntryRepository
 class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO]):
     """Handle the creation of a time entry."""
 
-    def __init__(self, time_entry_repository: ITimeEntryRepository) -> None:
+    def __init__(
+        self,
+        *,
+        unit_of_work: IUnitOfWork,
+        time_entry_repository: ITimeEntryRepository,
+        event_outbox: IEventOutbox | None = None,
+    ) -> None:
+        super().__init__(unit_of_work=unit_of_work, event_outbox=event_outbox)
         self.time_entry_repository = time_entry_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
