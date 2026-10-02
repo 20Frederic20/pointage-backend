@@ -37,6 +37,21 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         updated_at: datetime | None = None,
         version: int = 0,
     )-> None:
+        """
+
+        :param time_entry_id:
+        :param employee_id:
+        :param occured_at:
+        :param entry_type:
+        :param location:
+        :param location_confidence:
+        :param source:
+        :param idempotency_key:
+        :param wifi_identifier:
+        :param created_at:
+        :param updated_at:
+        :param version:
+        """
         super().__init__(
             time_entry_id, created_at=created_at, updated_at=updated_at,
             version=version
@@ -64,7 +79,15 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         idempotency_key: str,
     ) -> Self:
         """
-        Founding signup: the first employee of a brand-new workspace,.
+        :param time_entry_id:
+        :param employee_id:
+        :param entry_type:
+        :param location:
+        :param wifi_identifier:
+        :param location_confidence:
+        :param source:
+        :param idempotency_key:
+        :return:
         """
         time_entry = cls(
             time_entry_id,
