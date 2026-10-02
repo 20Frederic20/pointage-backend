@@ -8,9 +8,9 @@ from identity.domain.entities import Employee
 class IEmployeeRepository(IRepository[Employee, EmployeeId]):
 
     @abstractmethod
-    async def exists_by_employee_number(self, employee_nnumber):
+    async def exists_by_employee_number(self, employee_number: str) -> bool:
         ...
 
     @abstractmethod
-    async def find_by_employee_number(self, employee_number):
+    async def find_by_employee_number(self, employee_number: str) -> Employee | None:
         ...

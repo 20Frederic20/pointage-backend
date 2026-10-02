@@ -145,6 +145,7 @@ def build_users_container(
     return UsersContainer(
         user_repository=UserRepository(session),
         directory_repository=DirectoryRepository(session),
+        employee_repository=EmployeeRepository(session),
         unit_of_work=SQLAlchemyUnitOfWork(session),
         event_bus=event_bus,
         password_hasher=password_hasher,

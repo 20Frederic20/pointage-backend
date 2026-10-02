@@ -17,7 +17,7 @@ class EmployeeRepository(IEmployeeRepository):
 
     def __init__(
         self,
-        session: AsyncSession
+            session: AsyncSession
     ) -> None:
         self._session = session
         self._translator = EmployeesSpecificationTranslator()
@@ -30,6 +30,12 @@ class EmployeeRepository(IEmployeeRepository):
                 f"Employee {employee_id} not found", context=employee_id.value
             )
         return self._to_aggregate(row)
+
+    async def exists_by_employee_number(self, employee_number: str) -> bool:
+        row = await self._session.scalar(
+            select(EmployeeModel.id).where(EmployeeModel.employee_number == employee_number)
+        )
+        return row is not None
 
     async def find_by_employee_number(self, employee_number: str) -> Employee | None:
         row = await self._session.scalar(
@@ -134,6 +140,7 @@ class EmployeeRepository(IEmployeeRepository):
             user_id=UserId(row.user_id),
             directory_id=DirectoryId(row.directory_id),
             employee_number=row.employee_number,
+            role=row.role,
             phone=row.phone,
             is_active=row.is_active,
             created_at=row.created_at,

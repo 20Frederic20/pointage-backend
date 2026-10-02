@@ -2,11 +2,12 @@ from collections.abc import Sequence
 
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.domain.entity import AggregateRoot
+from core.domain.errors import NotFoundError
 from identity.domain.entities import Employee
 from identity.domain.repositories import IEmployeeRepository
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
-from punch.domain import TimeEntryId
+from punch.domain import TimeEntryId, LocationConfidence
 from punch.domain.entities import TimeEntry
 from punch.domain.repositories import ITimeEntryRepository
 
@@ -27,16 +28,18 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         self.employee_repository = employee_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
-        employee: Employee = await self.employee_repository.find_by_employee_number(request.employee_number)
-        location_confidence = "HIGH" if request.location and request.wifi_identifier else "MEDIUM"
+        employee: Employee | None = await self.employee_repository.find_by_employee_number(request.employee_number)
+        if not employee:
+            raise NotFoundError(f"Employee with number {request.employee_number} not found")
+        location_confidence = LocationConfidence("HIGH") if request.location and request.wifi_identifier else LocationConfidence("MEDIUM")
         time_entry = TimeEntry.create(
             time_entry_id=TimeEntryId.generate(),
             employee_id=employee.id,
             entry_type=request.entry_type,
             location=request.location,
-            location_confidence=location_confidence,
+            location_confidence=LocationConfidence(location_confidence),
             source=request.source,
-            idempotency_key=request.idempotency_key,
+            idempotency_key=request.idempotency_key if request.idempotency_key else None,
             wifi_identifier=request.wifi_identifier,
 
         )

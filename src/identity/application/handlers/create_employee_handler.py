@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from core.application import CommandHandler, IUnitOfWork
 from core.application.outbox import IEventOutbox
 from core.domain.entity import AggregateRoot
-from identity.domain import EmployeeId
+from identity.domain import EmployeeId, UserId, DirectoryId, Role
 from identity.domain.errors.errors import EmployeeWithThisNumberAlreadyExistsError
 
 from ...domain.entities import Employee
@@ -38,11 +38,11 @@ class CreateEmployeeHandler(
         employee = Employee.create(
             employee_id=EmployeeId.generate(),
             employee_number=request.employee_number,
-            user_id=request.user_id,
-            directory_id=request.directory_id,
+            user_id=UserId(request.user_id),
+            directory_id=DirectoryId(request.directory_id),
             phone=request.phone,
-            role=request.role,
-            is_active=request.is_active
+            role=Role(request.role),
+            is_active=request.is_active if request.is_active else False,
         )
         return EmployeeDTO.from_aggregate(employee), [employee]
 
