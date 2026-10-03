@@ -2,11 +2,13 @@ from datetime import datetime
 
 from adjustements.domain import AnomalyId, AnomalyType, Severity, AnomalyStatus, AnomalyCreated
 from core.domain.entity import AggregateRoot
+from punch.domain import TimeEntryId
 
 
 class Anomaly(AggregateRoot[AnomalyId]):
 
     __slots__ = (
+        "_time_entry_id",
         "_type",
         "_severity",
         "_status",
@@ -19,6 +21,7 @@ class Anomaly(AggregateRoot[AnomalyId]):
         self,
         anomaly_id: AnomalyId,
         *,
+        time_entry_id: TimeEntryId,
         type: AnomalyType,
         severity: Severity,
         status: AnomalyStatus,
@@ -32,6 +35,7 @@ class Anomaly(AggregateRoot[AnomalyId]):
         """
 
         :param anomaly_id:
+        :param time_entry_id:
         :param type:
         :param severity:
         :param status:
@@ -46,6 +50,7 @@ class Anomaly(AggregateRoot[AnomalyId]):
             anomaly_id, created_at=created_at, updated_at=updated_at,
             version=version
         )
+        self._time_entry_id = time_entry_id
         self._description = description
         self._type = type
         self._severity = severity
@@ -59,6 +64,7 @@ class Anomaly(AggregateRoot[AnomalyId]):
         cls,
         anomaly_id: AnomalyId,
         *,
+        time_entry_id: TimeEntryId,
         type: AnomalyType,
         severity: Severity,
         status: AnomalyStatus,
@@ -71,6 +77,7 @@ class Anomaly(AggregateRoot[AnomalyId]):
         """
         anomaly = cls(
             anomaly_id,
+            time_entry_id=time_entry_id,
             type=type,
             severity=severity,
             status=status,
@@ -81,9 +88,15 @@ class Anomaly(AggregateRoot[AnomalyId]):
         anomaly.record_event(AnomalyCreated(anomaly_id))
         return anomaly
 
+
+
     @property
     def type(self) -> AnomalyType:
         return self._type
+
+    @property
+    def time_entry_id(self) -> TimeEntryId:
+        return self._time_entry_id
 
     @property
     def severity(self) -> Severity:

@@ -1,13 +1,16 @@
 from adjustements.domain import IAnomalyRepository, Anomaly, AnomalyId
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, insert
 
 from core.domain.errors import NotFoundError
+from .models import AnomalyModel
+from punch.domain import TimeEntryId
 
 
 def _to_aggregate(row) -> Anomaly:
     return Anomaly(
         anomaly_id=AnomalyId(row.id),
+        time_entry_id=TimeEntryId(row.time_entry_id),
         type=row.type,
         severity=row.severity,
         status=row.status,
@@ -24,35 +27,36 @@ class AnomalyRepository(IAnomalyRepository):
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    async def get_by_id(self, anomaly_id: AnomalyId) -> Anomaly:
-        row = await self._session.get(Anomaly, anomaly_id.value)
+    async def get_by_id(self, aggregate_id: AnomalyId) -> Anomaly:
+        row = await self._session.get(AnomalyModel, aggregate_id.value)
         if row is None:
             raise NotFoundError(
-                f"Anomaly {anomaly_id} not found",
-                context=anomaly_id.value,
+                f"Anomaly {aggregate_id} not found",
+                context=aggregate_id.value,
             )
         return _to_aggregate(row)
 
-    async def exists(self, anomaly_id: AnomalyId) -> Anomaly:
+    async def exists(self, aggregate_id: AnomalyId) -> bool:
         row = await self._session.scalar(
-            select(Anomaly.id).where(Anomaly.id == anomaly_id.value)
+            select(AnomalyModel.id).where(AnomalyModel.id == aggregate_id.value)
         )
         return row is not None
 
     async def exists_any(self) -> bool:
-        row = await self._session.scalar(select(Anomaly.id).limit(1))
+        row = await self._session.scalar(select(AnomalyModel.id).limit(1))
         return row is not None
 
-    async def save(self, anomaly: Anomaly) -> None:
-        if anomaly.version == 0:
-            await self._insert(anomaly)
-        anomaly._advance_version()
+    async def save(self, aggregate: Anomaly) -> None:
+        if aggregate.version == 0:
+            await self._insert(aggregate)
+        aggregate._advance_version()
 
     async def _insert(self, anomaly: Anomaly) -> None:
         try:
             await self._session.execute(
-                Anomaly.__table__.insert().values(
+                insert(AnomalyModel).values(
                     id=anomaly.id.value,
+                    time_entry_id=anomaly.time_entry_id.value,
                     type=anomaly.type,
                     severity=anomaly.severity,
                     status=anomaly.status,

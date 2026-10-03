@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 class AnomalyModel(BaseModel):
     __tablename__ = "anomalies"
 
+    time_entry_id: Mapped[str] = mapped_column(String(32), ForeignKey("time_entries.id"), nullable=False)
     type: Mapped[AnomalyType] = mapped_column(String(32), nullable=False)
     status: Mapped[AnomalyStatus] = mapped_column(String(32), nullable=False)
     severity: Mapped[Severity] = mapped_column(String(32), nullable=False)
