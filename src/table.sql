@@ -106,3 +106,46 @@ CREATE INDEX ix_time_entries_employee_id ON time_entries (employee_id);
 
 -- Index optionnel mais conseillé sur l'idempotency_key si vous faites des recherches fréquentes dessus
 CREATE INDEX ix_time_entries_idempotency_key ON time_entries (idempotency_key);
+
+CREATE INDEX ix_time_entries_entry_type ON time_entries (entry_type);
+
+CREATE TABLE IF NOT EXISTS anomalies (
+    id VARCHAR(32) PRIMARY KEY,
+    time_entry_id VARCHAR(32) NOT NULL REFERENCES time_entries(id),
+    type VARCHAR(50) NOT NULL,
+    severity VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    description TEXT,
+    detected_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    resolved_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version_id INTEGER DEFAULT 1
+);
+
+CREATE INDEX ix_anomalies_time_entry_id ON anomalies (time_entry_id);
+
+CREATE INDEX ix_anomalies_type ON anomalies (type);
+
+CREATE INDEX ix_anomalies_status ON anomalies (status);
+
+CREATE INDEX ix_anomalies_severity ON anomalies (severity);
+
+
+CREATE TABLE IF NOT EXISTS regularization_requests (
+    id VARCHAR(32) PRIMARY KEY,
+    anomaly_id VARCHAR(32) NOT NULL REFERENCES anomalies(id),
+    request_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    reason TEXT,
+    proposed_time TIMESTAMP WITH TIME ZONE,
+    decision_comment TEXT,
+    validated_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version_id INTEGER DEFAULT 1
+);
+
+CREATE INDEX ix_regularization_requests_anomaly_id ON regularization_requests (anomaly_id);
+
+CREATE INDEX ix_regularization_requests_status ON regularization_requests (status);
