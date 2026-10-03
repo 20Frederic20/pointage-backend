@@ -53,7 +53,7 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
         proposed_time: datetime,
         status: RegularizationStatus,
         anomaly_id: AnomalyId
-    ) -> "RegularizationRequest":
+    ) -> RegularizationRequest:
         """
         Factory for a brand-new regularization request; records: class:`RegularizationRequestCreated`.
         """
