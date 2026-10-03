@@ -46,6 +46,7 @@ class Anomaly(AggregateRoot[AnomalyId]):
             anomaly_id, created_at=created_at, updated_at=updated_at,
             version=version
         )
+        self._description = description
         self._type = type
         self._severity = severity
         self._status = status
@@ -79,3 +80,27 @@ class Anomaly(AggregateRoot[AnomalyId]):
         )
         anomaly.record_event(AnomalyCreated(anomaly_id))
         return anomaly
+
+    @property
+    def type(self) -> AnomalyType:
+        return self._type
+
+    @property
+    def severity(self) -> Severity:
+        return self._severity
+
+    @property
+    def status(self) -> AnomalyStatus:
+        return self._status
+
+    @property
+    def detected_at(self) -> datetime:
+        return self._detected_at
+
+    @property
+    def resolved_at(self) -> datetime | None:
+        return self._resolved_at
+
+    @property
+    def description(self) -> str | None:
+        return self._description

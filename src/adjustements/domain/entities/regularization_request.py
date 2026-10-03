@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from adjustements.domain import RegularizationRequestId, RegularizationStatus, RegularizationRequestCreated
+from adjustements.domain import RegularizationRequestId, RegularizationStatus, RegularizationRequestCreated, AnomalyId
 from core.domain.entity import AggregateRoot
 
 
@@ -20,7 +20,7 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
         self,
         regularization_request_id: RegularizationRequestId,
         *,
-        anomaly_id: str,
+        anomaly_id: AnomalyId,
         request_at: datetime,
         reason: str,
         proposed_time: datetime,
@@ -52,7 +52,7 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
         reason: str,
         proposed_time: datetime,
         status: RegularizationStatus,
-        anomaly_id: str
+        anomaly_id: AnomalyId
     ) -> "RegularizationRequest":
         """
         Factory for a brand-new regularization request; records: class:`RegularizationRequestCreated`.
@@ -67,3 +67,31 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
         )
         regularization_request.record_event(RegularizationRequestCreated(regularization_request_id))
         return regularization_request
+
+    @property
+    def anomaly_id(self) -> AnomalyId:
+        return self._anomaly_id
+
+    @property
+    def request_at(self) -> datetime:
+        return self._request_at
+
+    @property
+    def reason(self) -> str:
+        return self._reason
+
+    @property
+    def proposed_time(self) -> datetime:
+        return self._proposed_time
+
+    @property
+    def status(self) -> RegularizationStatus:
+        return self._status
+
+    @property
+    def decision_comment(self) -> str | None:
+        return self._decision_comment
+
+    @property
+    def validated_at(self) -> datetime | None:
+        return self._validated_at
