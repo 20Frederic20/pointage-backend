@@ -7,6 +7,7 @@ from core.domain.entity import AggregateRoot
 class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
 
     __slots__ = (
+        "_anomaly_id",
         "_request_at",
         "_reason",
         "_proposed_time",
@@ -19,6 +20,7 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
         self,
         regularization_request_id: RegularizationRequestId,
         *,
+        anomaly_id: str,
         request_at: datetime,
         reason: str,
         proposed_time: datetime,
@@ -33,6 +35,7 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
             regularization_request_id, created_at=created_at, updated_at=updated_at,
             version=version
         )
+        self._anomaly_id = anomaly_id
         self._request_at = request_at
         self._reason = reason
         self._proposed_time = proposed_time
@@ -48,7 +51,8 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
         request_at: datetime,
         reason: str,
         proposed_time: datetime,
-        status: RegularizationStatus
+        status: RegularizationStatus,
+        anomaly_id: str
     ) -> "RegularizationRequest":
         """
         Factory for a brand-new regularization request; records: class:`RegularizationRequestCreated`.
@@ -58,7 +62,8 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
             request_at=request_at,
             reason=reason,
             proposed_time=proposed_time,
-            status=status
+            status=status,
+            anomaly_id=anomaly_id
         )
         regularization_request.record_event(RegularizationRequestCreated(regularization_request_id))
         return regularization_request
