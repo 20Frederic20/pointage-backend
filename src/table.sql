@@ -149,3 +149,33 @@ CREATE TABLE IF NOT EXISTS regularization_requests (
 CREATE INDEX ix_regularization_requests_anomaly_id ON regularization_requests (anomaly_id);
 
 CREATE INDEX ix_regularization_requests_status ON regularization_requests (status);
+CREATE TABLE IF NOT EXISTS absence_types (
+    id VARCHAR(32) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    paid BOOLEAN NOT NULL,
+    counts_as_work_time BOOLEAN NOT NULL,
+    deducts_balance BOOLEAN NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version_id INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS absences (
+    id VARCHAR(32) PRIMARY KEY,
+    employee_id VARCHAR(32) NOT NULL REFERENCES employees(id),
+    absence_type_id VARCHAR(32) NOT NULL REFERENCES absence_types(id),
+    start_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    reason VARCHAR(512) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    justification_reference VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version_id INTEGER DEFAULT 1,
+    CONSTRAINT ck_absences_period CHECK (end_at > start_at)
+);
+
+CREATE INDEX ix_absences_employee_id ON absences (employee_id);
+
+CREATE INDEX ix_absences_status ON absences (status);
