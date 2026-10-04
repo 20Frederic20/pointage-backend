@@ -71,12 +71,12 @@ class Absence(AggregateRoot[AbsenceId]):
         """``declarerAbsence``: a new, pending absence of an active type."""
         if end_at <= start_at:
             raise InvalidAbsencePeriodError(
-                "La fin de l'absence doit être postérieure à son début",
+                "An absence must end after it starts",
                 context=f"{start_at.isoformat()} -> {end_at.isoformat()}",
             )
         if not absence_type.active:
             raise AbsenceTypeInactiveError(
-                f"Le type d'absence {absence_type.name!r} n'est plus actif",
+                f"Absence type {absence_type.name!r} is no longer active",
                 context=absence_type.id.value,
             )
         absence = cls(
@@ -116,12 +116,12 @@ class Absence(AggregateRoot[AbsenceId]):
         same employee detected while they were absent."""
         if self._status != AbsenceStatus.APPROVED:
             raise AbsenceNotApprovedError(
-                "Seule une absence validée peut neutraliser une anomalie",
+                "Only an approved absence can neutralize an anomaly",
                 context=self.id.value,
             )
         if anomaly_employee_id != self._employee_id or not self.covers(anomaly.detected_at):
             raise AnomalyNotCoveredByAbsenceError(
-                "L'anomalie ne concerne pas cet employé ou tombe hors de la période d'absence",
+                "The anomaly belongs to another employee or falls outside the absence",
                 context=anomaly.id.value,
             )
         anomaly.resolve(resolved_at=datetime.now(UTC))
@@ -129,7 +129,7 @@ class Absence(AggregateRoot[AbsenceId]):
     def _decide(self, status: AbsenceStatus) -> None:
         if self._status != AbsenceStatus.PENDING:
             raise AbsenceNotPendingError(
-                f"L'absence est déjà {self._status.value}",
+                f"Absence is already {self._status.value}",
                 context=self.id.value,
             )
         self._status = status

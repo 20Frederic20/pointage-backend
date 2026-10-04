@@ -1,6 +1,8 @@
 """SQLAlchemy adapter for the Absence aggregate — the versioned save protocol
 (same as ``UserRepository``)."""
 
+from datetime import datetime
+
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +35,19 @@ class AbsenceRepository(IAbsenceRepository):
             select(AbsenceModel.id).where(AbsenceModel.id == absence_id.value)
         )
         return row is not None
+
+    async def find_approved_by_employee_between(
+        self, employee_id: EmployeeId, start: datetime, end: datetime
+    ) -> list[Absence]:
+        rows = await self._session.scalars(
+            select(AbsenceModel).where(
+                AbsenceModel.employee_id == employee_id.value,
+                AbsenceModel.status == AbsenceStatus.APPROVED.value,
+                AbsenceModel.start_at < end,
+                AbsenceModel.end_at > start,
+            )
+        )
+        return [self._to_aggregate(row) for row in rows.all()]
 
     # -- write side ---------------------------------------------------------
 
