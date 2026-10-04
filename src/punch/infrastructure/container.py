@@ -8,6 +8,7 @@ from core.application import ApplicationMediator, HandlerContainer, IUnitOfWork
 from core.domain.events import BaseEvent, IEventBus
 from core.infrastructure.events import EventBusEmitter
 from core.infrastructure.outbox import TransactionalOutbox
+from identity.infrastructure.persistence.directory_repository import DirectoryRepository
 from identity.infrastructure.persistence.employee_repository import EmployeeRepository
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.handlers.create_time_entry_handler import CreateTimeEntryHandler
@@ -21,6 +22,7 @@ class PunchesContainer:
 
     time_entry_repository: TimeEntryRepository
     employee_repository: EmployeeRepository
+    directory_repository: DirectoryRepository
     unit_of_work: IUnitOfWork
     event_bus: IEventBus[BaseEvent]
     event_outbox: TransactionalOutbox | None = None
@@ -43,6 +45,7 @@ class PunchesContainer:
                 unit_of_work=self.unit_of_work,
                 time_entry_repository=self.time_entry_repository,
                 employee_repository=self.employee_repository,
+                directory_repository=self.directory_repository,
                 event_outbox=self.event_outbox,
             )
         raise TypeError(
@@ -63,6 +66,7 @@ def build_punches_container(
     """Build a request-scoped punch container."""
     return PunchesContainer(
         employee_repository=EmployeeRepository(session),
+        directory_repository=DirectoryRepository(session),
         time_entry_repository=TimeEntryRepository(session),
         unit_of_work=SQLAlchemyUnitOfWork(session),
         event_bus=event_bus,
