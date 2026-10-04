@@ -24,7 +24,8 @@ class RegularizationRequestModel(BaseModel):
 
     anomaly_id: Mapped[str] = mapped_column(String(32), ForeignKey("anomalies.id"), nullable=False)
     status: Mapped[RegularizationStatus] = mapped_column(String(32), nullable=False)
-    requested_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    request_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    proposed_time: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     validated_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reason: Mapped[str | None] = mapped_column(String(512), nullable=False)
     decision_comment: Mapped[str | None] = mapped_column(String(512), nullable=True)

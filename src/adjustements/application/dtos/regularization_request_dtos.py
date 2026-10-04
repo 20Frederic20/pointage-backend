@@ -23,8 +23,8 @@ class RegularizationRequestDTO(DTO):
     def from_aggregate(cls, regularization_request) -> "RegularizationRequestDTO":
 
         return cls(
-            id=regularization_request.id,
-            anomaly_id=regularization_request.anomaly_id,
+            id=regularization_request.id.value,
+            anomaly_id=regularization_request.anomaly_id.value,
             request_at=regularization_request.request_at,
             reason=regularization_request.reason,
             proposed_time=regularization_request.proposed_time,
@@ -36,6 +36,7 @@ class RegularizationRequestDTO(DTO):
         )
 
 
+@dataclass(frozen=True)
 class RegularizationRequestsPageDTO(DTO):
     items: tuple[RegularizationRequestDTO, ...]
     total: int

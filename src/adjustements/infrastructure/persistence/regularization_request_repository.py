@@ -1,4 +1,4 @@
-from adjustements.domain import IRegularizationRequestRepository, RegularizationRequest, RegularizationRequestId
+from adjustements.domain import AnomalyId, IRegularizationRequestRepository, RegularizationRequest, RegularizationRequestId
 from core.domain.errors import NotFoundError
 from sqlalchemy import select, insert, delete
 
@@ -8,7 +8,7 @@ from .models import RegularizationRequestModel
 def _to_aggregate(regularization_request_model) -> RegularizationRequest:
     return RegularizationRequest(
         regularization_request_id=RegularizationRequestId(regularization_request_model.id),
-        anomaly_id=regularization_request_model.anomaly_id,
+        anomaly_id=AnomalyId(regularization_request_model.anomaly_id),
         request_at=regularization_request_model.request_at,
         reason=regularization_request_model.reason,
         proposed_time=regularization_request_model.proposed_time,
@@ -17,7 +17,7 @@ def _to_aggregate(regularization_request_model) -> RegularizationRequest:
         validated_at=regularization_request_model.validated_at,
         created_at=regularization_request_model.created_at,
         updated_at=regularization_request_model.updated_at,
-        version=regularization_request_model.version_ic,
+        version=regularization_request_model.version_id,
     )
 
 
@@ -36,8 +36,10 @@ class RegularizationRequestRepository(IRegularizationRequestRepository):
         return _to_aggregate(row)
 
     async def exists(self, aggregate_id: RegularizationRequestId) -> bool:
-        row = await self._session.get(RegularizationRequestModel, aggregate_id.value)
-        return _to_aggregate(row) is not None
+        row = await self._session.scalar(
+            select(RegularizationRequestModel.id).where(RegularizationRequestModel.id == aggregate_id.value)
+        )
+        return row is not None
 
     async def exists_any(self) -> bool:
         row = await self._session.scalar(select(RegularizationRequestModel.id).limit(1))
@@ -67,7 +69,7 @@ class RegularizationRequestRepository(IRegularizationRequestRepository):
                     validated_at=regularization_request.validated_at,
                     created_at=regularization_request.created_at,
                     updated_at=regularization_request.updated_at,
-                    version_ic=regularization_request.version
+                    version_id=regularization_request.version
                 )
             )
         except Exception as e:

@@ -16,6 +16,8 @@ for the first real binding).
 from cqrs.dispatcher.event import EventDispatcher
 from cqrs.events.map import EventMap
 
+from adjustements.application.consumers import ADJUSTMENTS_CONSUMERS
+from adjustements.application.notifications import ADJUSTMENTS_EVENT_REGISTRY
 from core.application import HandlerContainer
 from core.infrastructure.outbox import LocalMessageBroker, OutboxRelay
 from core.infrastructure.outbox.outbox_relay import SessionFactory
@@ -27,6 +29,7 @@ from punch.application.notifications import PUNCHES_EVENT_REGISTRY
 _EVENT_MAP = {
     **USERS_CONSUMERS,
     **PUNCHES_CONSUMERS,
+    **ADJUSTMENTS_CONSUMERS,
 }
 
 _CONSUMER_FACTORIES = {
@@ -37,6 +40,7 @@ _CONSUMER_FACTORIES = {
 _EVENT_REGISTRY = {
     **USERS_EVENT_REGISTRY,
     **PUNCHES_EVENT_REGISTRY,
+    **ADJUSTMENTS_EVENT_REGISTRY,
 }
 
 
