@@ -9,7 +9,7 @@ from adjustements.domain import Severity, AnomalyStatus, AnomalyType, Anomaly
 @dataclass(frozen=True)
 class AnomalyDTO(DTO):
     id: str
-    time_entry_id: TimeEntryId
+    time_entry_id: str
     severity: Severity
     status: AnomalyStatus
     type: AnomalyType
@@ -23,7 +23,7 @@ class AnomalyDTO(DTO):
     def from_aggregate(cls, anomaly: Anomaly) -> "AnomalyDTO":
         return AnomalyDTO(
             id=anomaly.id.value,
-            time_entry_id=TimeEntryId(anomaly.time_entry_id.value),
+            time_entry_id=anomaly.time_entry_id.value,
             severity=anomaly.severity,
             status=anomaly.status,
             type=anomaly.type,

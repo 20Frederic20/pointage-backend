@@ -1,5 +1,5 @@
 from .domain import AnomalyType, AnomalyStatus, RegularizationStatus, Severity, AnomalyId, RegularizationRequestId, Anomaly, RegularizationRequest, AnomalyCreated, RegularizationRequestCreated, IAnomalyRepository, IRegularizationRequestRepository
-from .application import CreateAnomalyCommand, CreateRegularizationRequestCommand, AnomaliesPageDTO, AnomalyDTO
+from .application import CreateAnomalyCommand, CreateRegularizationRequestCommand, AnomaliesPageDTO, AnomalyDTO, GetAnomalyByIdQuery, GetRegularizationRequestByIdQuery
 from .infrastructure import AnomalyRepository, RegularizationRequestRepository, AnomalyModel, RegularizationRequestModel
 
 __all__ = [
@@ -14,6 +14,8 @@ __all__ = [
     "AnomalyStatus",
     "CreateAnomalyCommand",
     "CreateRegularizationRequestCommand",
+    "GetAnomalyByIdQuery",
+    "GetRegularizationRequestByIdQuery",
     "IAnomalyRepository",
     "IRegularizationRequestRepository",
     "RegularizationStatus",
