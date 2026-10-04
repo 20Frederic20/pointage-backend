@@ -1,4 +1,4 @@
-from adjustements.domain import AnomalyId
+from ..value_objects import AnomalyId
 from core.domain.events import BaseEvent
 
 

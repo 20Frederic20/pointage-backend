@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
+from absences.interface.routers import absence_types_router, absences_router
 from core.exceptions import register_exception_handlers
 from core.settings import AppSettings, DatabaseSettings
 from identity.interface.routers import (
@@ -59,6 +60,8 @@ def create_app(
     app.include_router(directories_router)
     app.include_router(employees_router)
     app.include_router(time_entries_router)
+    app.include_router(absence_types_router)
+    app.include_router(absences_router)
     return app
 
 

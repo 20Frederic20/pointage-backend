@@ -1,7 +1,9 @@
 from datetime import datetime
 
-from adjustements.domain import AnomalyId, AnomalyType, Severity, AnomalyStatus, AnomalyCreated
+from ..events.anomaly_events import AnomalyCreated
+from ..value_objects import AnomalyId, AnomalyStatus, AnomalyType, Severity
 from core.domain.entity import AggregateRoot
+from core.domain.errors import ConflictError
 from punch.domain import TimeEntryId
 
 
@@ -89,6 +91,17 @@ class Anomaly(AggregateRoot[AnomalyId]):
         return anomaly
 
 
+
+    def resolve(self, *, resolved_at: datetime) -> None:
+        """``resoudre``: close an open anomaly."""
+        if self._status in (AnomalyStatus.RESOLVED, AnomalyStatus.CANCELLED):
+            raise ConflictError(
+                f"Anomaly {self.id.value} is already {self._status}",
+                context=self.id.value,
+            )
+        self._status = AnomalyStatus.RESOLVED
+        self._resolved_at = resolved_at
+        self.touch()
 
     @property
     def type(self) -> AnomalyType:

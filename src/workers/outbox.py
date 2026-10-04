@@ -16,6 +16,8 @@ for the first real binding).
 from cqrs.dispatcher.event import EventDispatcher
 from cqrs.events.map import EventMap
 
+from absences.application.consumers import ABSENCES_CONSUMERS
+from absences.application.notifications import ABSENCES_EVENT_REGISTRY
 from adjustements.application.consumers import ADJUSTMENTS_CONSUMERS
 from adjustements.application.notifications import ADJUSTMENTS_EVENT_REGISTRY
 from core.application import HandlerContainer
@@ -30,6 +32,7 @@ _EVENT_MAP = {
     **USERS_CONSUMERS,
     **PUNCHES_CONSUMERS,
     **ADJUSTMENTS_CONSUMERS,
+    **ABSENCES_CONSUMERS,
 }
 
 _CONSUMER_FACTORIES = {
@@ -41,6 +44,7 @@ _EVENT_REGISTRY = {
     **USERS_EVENT_REGISTRY,
     **PUNCHES_EVENT_REGISTRY,
     **ADJUSTMENTS_EVENT_REGISTRY,
+    **ABSENCES_EVENT_REGISTRY,
 }
 
 

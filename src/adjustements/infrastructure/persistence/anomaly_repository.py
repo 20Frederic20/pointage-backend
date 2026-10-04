@@ -1,8 +1,8 @@
 from adjustements.domain import IAnomalyRepository, Anomaly, AnomalyId
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert
+from sqlalchemy import delete, insert, select, update
 
-from core.domain.errors import NotFoundError
+from core.domain.errors import ConflictError, NotFoundError
 from .models import AnomalyModel
 from punch.domain import TimeEntryId
 
@@ -46,9 +46,14 @@ class AnomalyRepository(IAnomalyRepository):
         row = await self._session.scalar(select(AnomalyModel.id).limit(1))
         return row is not None
 
+    async def delete(self, aggregate_id: AnomalyId) -> None:
+        await self._session.execute(delete(AnomalyModel).where(AnomalyModel.id == aggregate_id.value))
+
     async def save(self, aggregate: Anomaly) -> None:
         if aggregate.version == 0:
             await self._insert(aggregate)
+        else:
+            await self._update(aggregate)
         aggregate._advance_version()
 
     async def _insert(self, anomaly: Anomaly) -> None:
@@ -65,9 +70,27 @@ class AnomalyRepository(IAnomalyRepository):
                     description=anomaly.description,
                     created_at=anomaly.created_at,
                     updated_at=anomaly.updated_at,
-                    version_id=anomaly.version
+                    version_id=1,
                 )
             )
         except Exception as e:
             await self._session.rollback()
             raise e
+    async def _update(self, anomaly: Anomaly) -> None:
+        result = await self._session.execute(
+            update(AnomalyModel.__table__)
+            .where(AnomalyModel.id == anomaly.id.value)
+            .where(AnomalyModel.version_id == anomaly.version)
+            .values(
+                status=anomaly.status,
+                resolved_at=anomaly.resolved_at,
+                description=anomaly.description,
+                updated_at=anomaly.updated_at,
+                version_id=anomaly.version + 1,
+            )
+        )
+        if result.rowcount == 0:
+            raise ConflictError(
+                f"Anomaly {anomaly.id} was modified concurrently (stale version {anomaly.version})",
+                context=anomaly.id.value,
+            )
