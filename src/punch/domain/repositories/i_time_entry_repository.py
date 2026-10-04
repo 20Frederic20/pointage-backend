@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from datetime import datetime
 
 from core.domain.repositories import IRepository
@@ -16,4 +17,11 @@ class ITimeEntryRepository(IRepository[TimeEntry, TimeEntryId]):
         ...
 
     async def find_last_by_employee_id(self, employee_id: EmployeeId) -> TimeEntry | None:
+        ...
+
+    @abstractmethod
+    async def find_by_employee_between(
+        self, employee_id: EmployeeId, start: datetime, end: datetime
+    ) -> list[TimeEntry]:
+        """Entries of an employee with ``start <= occured_at < end``, oldest first."""
         ...

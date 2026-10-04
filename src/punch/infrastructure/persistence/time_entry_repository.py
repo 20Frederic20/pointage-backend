@@ -90,6 +90,20 @@ class TimeEntryRepository(ITimeEntryRepository):
         )
         return _to_aggregate(row) if row is not None else None
 
+    async def find_by_employee_between(
+        self, employee_id: EmployeeId, start: datetime, end: datetime
+    ) -> list[TimeEntry]:
+        rows = await self._session.scalars(
+            select(TimeEntryModel)
+            .where(
+                TimeEntryModel.employee_id == employee_id.value,
+                TimeEntryModel.occured_at >= start,
+                TimeEntryModel.occured_at < end,
+            )
+            .order_by(TimeEntryModel.occured_at)
+        )
+        return [_to_aggregate(row) for row in rows.all()]
+
     async def save(self, time_entry: TimeEntry) -> None:
         if time_entry.version == 0:
             await self._insert(time_entry)
