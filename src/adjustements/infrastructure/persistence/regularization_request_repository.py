@@ -69,7 +69,7 @@ class RegularizationRequestRepository(IRegularizationRequestRepository):
                     validated_at=regularization_request.validated_at,
                     created_at=regularization_request.created_at,
                     updated_at=regularization_request.updated_at,
-                    version_id=regularization_request.version
+                    version_id=1,
                 )
             )
         except Exception as e:

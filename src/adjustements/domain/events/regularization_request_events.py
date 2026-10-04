@@ -1,4 +1,4 @@
-from adjustements.domain import RegularizationRequestId
+from ..value_objects import RegularizationRequestId
 from core.domain.events import BaseEvent
 
 

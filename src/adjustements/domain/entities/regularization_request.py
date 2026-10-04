@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from adjustements.domain import RegularizationRequestId, RegularizationStatus, RegularizationRequestCreated, AnomalyId
+from ..events.regularization_request_events import RegularizationRequestCreated
+from ..value_objects import AnomalyId, RegularizationRequestId, RegularizationStatus
 from core.domain.entity import AggregateRoot
 
 
