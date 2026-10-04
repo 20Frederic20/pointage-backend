@@ -10,7 +10,6 @@ from identity.domain.entities import Employee
 class EmployeeDTO(DTO):
     id: str
     user_id: str
-    directory_id: str
     employee_number: str
     role: Role
     is_active: bool
@@ -25,7 +24,6 @@ class EmployeeDTO(DTO):
             user_id=employee.user_id.value,
             role=employee.role,
             is_active=employee.is_active,
-            directory_id=employee.directory_id.value,
             phone=employee.phone,
             employee_number=employee.employee_number,
             created_at=employee.created_at,

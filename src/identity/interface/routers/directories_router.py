@@ -31,7 +31,9 @@ async def create(
         CreateDirectoryCommand(
             name=payload.name,
             code=payload.code,
-            location=Location(payload.latitude, payload.longitude)
+            location=Location(payload.latitude, payload.longitude),
+            site_id=payload.site_id,
+            parent_directory_id=payload.parent_directory_id,
         )
     )
 

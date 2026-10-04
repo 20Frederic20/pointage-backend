@@ -1,16 +1,24 @@
 """ORM models of the users bounded context (D10: unprefixed table names)."""
 
-from datetime import datetime
+from datetime import date, datetime
 
 from geoalchemy2 import Geography
 from shapely.geometry import Point
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.infrastructure.database import BaseModel
 
 from ...domain.value_objects.role import Role
+
+
+class SiteModel(BaseModel):
+    __tablename__ = "sites"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    address: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class DirectoryModel(BaseModel):
@@ -21,6 +29,12 @@ class DirectoryModel(BaseModel):
     location: Mapped[Point] = mapped_column(
         Geography(geometry_type="POINT", srid=4326),
         nullable=False
+    )
+    site_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("sites.id"), nullable=False, index=True
+    )
+    parent_directory_id: Mapped[str | None] = mapped_column(
+        String(32), ForeignKey("directories.id"), nullable=True, index=True
     )
 
 
@@ -61,7 +75,20 @@ class EmployeeModel(BaseModel):
     user_id: Mapped[str] = mapped_column(
         String(32), ForeignKey("users.id"), nullable=False, index=True
     )
-    directory_id: Mapped[str] = mapped_column(
-        String(32), ForeignKey("users.id"), nullable=False, index=True
+
+
+class EmployeeAssignmentModel(BaseModel):
+    __tablename__ = "employee_assignments"
+
+    employee_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("employees.id"), nullable=False, index=True
     )
+    directory_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("directories.id"), nullable=False, index=True
+    )
+    site_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("sites.id"), nullable=False
+    )
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.domain.errors import ConflictError, NotFoundError
 from core.domain.specifications import Specification
-from identity.domain import DirectoryId, EmployeeId, UserId
+from identity.domain import EmployeeId, UserId
 from identity.domain.entities import Employee
 from identity.domain.repositories import IEmployeeRepository
 from identity.infrastructure.persistence import EmployeeModel
@@ -95,7 +95,6 @@ class EmployeeRepository(IEmployeeRepository):
                     employee_number=employee.employee_number,
                     user_id=employee.user_id.value,
                     role=employee.role,
-                    directory_id=employee.directory_id.value,
                     phone=employee.phone,
                     is_active=employee.is_active,
                     # the domain owns timestamps at insert (single source of
@@ -107,8 +106,8 @@ class EmployeeRepository(IEmployeeRepository):
             )
         except IntegrityError as exc:
             raise ConflictError(
-                f"Employee {employee.id} already exists (id or email collision)",
-                context=employee.email,
+                f"Employee {employee.id} already exists (id or employee number collision)",
+                context=employee.id.value,
             ) from exc
 
     async def _update(self, employee: Employee) -> None:
@@ -120,7 +119,6 @@ class EmployeeRepository(IEmployeeRepository):
                 employee_number=employee.employee_number,
                 user_id=employee.user_id.value,
                 role=employee.role,
-                directory_id=employee.directory_id.value,
                 phone=employee.phone,
                 is_active=employee.is_active,
                 updated_at=employee.updated_at or datetime.now(UTC),
@@ -138,7 +136,6 @@ class EmployeeRepository(IEmployeeRepository):
         return Employee(
             EmployeeId(row.id),
             user_id=UserId(row.user_id),
-            directory_id=DirectoryId(row.directory_id),
             employee_number=row.employee_number,
             role=row.role,
             phone=row.phone,

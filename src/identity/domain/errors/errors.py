@@ -41,6 +41,30 @@ class DirectoryAlreadyExistsError(DomainError):
     severity = Severity.WARNING
 
 
+class SiteInactiveError(DomainError):
+    """Raised when a directory or an assignment targets a deactivated site."""
+
+    code = "SITE_INACTIVE"
+    http_status = 409
+    severity = Severity.WARNING
+
+
+class InvalidEmployeeAssignmentDatesError(DomainError):
+    """Raised when an assignment ends before it starts."""
+
+    code = "INVALID_EMPLOYEE_ASSIGNMENT_DATES"
+    http_status = 422
+    severity = Severity.WARNING
+
+
+class OverlappingEmployeeAssignmentError(DomainError):
+    """Raised when an employee would have two assignments on the same date."""
+
+    code = "OVERLAPPING_EMPLOYEE_ASSIGNMENT"
+    http_status = 409
+    severity = Severity.WARNING
+
+
 class EmployeeWithThisNumberAlreadyExistsError(DomainError):
 
     code = "EMPLOYEE_WITH_THIS_NUMBER_ALREADY_EXISTS"

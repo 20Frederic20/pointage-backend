@@ -11,7 +11,7 @@ from identity.domain.value_objects.location import Location
 
 from ...domain.entities import Directory
 from ...domain.repositories import IDirectoryRepository
-from ...domain.value_objects.ids import DirectoryId
+from ...domain.value_objects.ids import DirectoryId, SiteId
 from .models import DirectoryModel
 
 
@@ -77,6 +77,12 @@ class DirectoryRepository(IDirectoryRepository):
                     name=directory.name,
                     code=directory.code,
                     location=directory.location.to_wkt(),
+                    site_id=directory.site_id.value,
+                    parent_directory_id=(
+                        directory.parent_directory_id.value
+                        if directory.parent_directory_id is not None
+                        else None
+                    ),
                     created_at=directory.created_at or datetime.now(UTC),
                     updated_at=directory.updated_at or datetime.now(UTC),
                     version_id=1,
@@ -97,6 +103,12 @@ class DirectoryRepository(IDirectoryRepository):
                 name=directory.name,
                 code=directory.code,
                 location=directory.location.to_wkt(),
+                site_id=directory.site_id.value,
+                parent_directory_id=(
+                    directory.parent_directory_id.value
+                    if directory.parent_directory_id is not None
+                    else None
+                ),
                 updated_at=directory.updated_at or datetime.now(UTC),
                 version_id=directory.version + 1,
             )
@@ -118,6 +130,10 @@ class DirectoryRepository(IDirectoryRepository):
             name=row.name,
             code=row.code,
             location=location_obj,
+            site_id=SiteId(row.site_id),
+            parent_directory_id=(
+                DirectoryId(row.parent_directory_id) if row.parent_directory_id else None
+            ),
             created_at=row.created_at,
             updated_at=row.updated_at,
             version=row.version_id,

@@ -1,6 +1,7 @@
-"""Renaming the workspace."""
+"""Create an employee and their first assignment to a directory."""
 
 from dataclasses import dataclass
+from datetime import date
 
 from core.application import Command
 from identity.domain import Role
@@ -15,3 +16,5 @@ class CreateEmployeeCommand(Command):
     role: Role | None = None
     phone: str | None = None
     is_active: bool | None = None
+    # First day of the initial assignment; today when omitted.
+    assignment_start_date: date | None = None

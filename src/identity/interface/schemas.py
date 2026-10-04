@@ -6,7 +6,7 @@ snake_case and camelCase (``populate_by_name``); responses always dump
 ``by_alias=True``.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -38,6 +38,8 @@ class CreateEmployeeRequest(_CamelSchema):
     employee_number: str = Field(min_length=10)
     is_active: bool = Field(default=False)
     phone: str | None = Field(default=None, min_length=10)
+    # First day of the initial assignment to ``directory_id``; today when omitted.
+    assignment_start_date: date | None = None
 
 
 class AcceptInviteRequest(_CamelSchema):
@@ -72,6 +74,24 @@ class CreateDirectoryRequest(_CamelSchema):
     name: str
     longitude: float
     latitude: float
+    site_id: str
+    parent_directory_id: str | None = None
+
+
+class CreateSiteRequest(_CamelSchema):
+    name: str = Field(min_length=1, max_length=255)
+    address: str | None = Field(default=None, max_length=512)
+
+
+class AssignEmployeeRequest(_CamelSchema):
+    employee_id: str
+    directory_id: str
+    start_date: date
+    end_date: date | None = None
+
+
+class EndEmployeeAssignmentRequest(_CamelSchema):
+    end_date: date
 
 
 class UpdateDirectoryRequest(_CamelSchema):
@@ -105,12 +125,12 @@ class UserResponse(_CamelSchema):
 
 class EmployeeResponse(_CamelSchema):
 
+    id: str
     role: RoleSchema
     employee_number: str = Field(alias="employeeNumber")
     is_active: bool = Field(alias="isActive")
     phone: str | None = Field(default=None)
     user_id: str = Field(alias="userId")
-    directory_id: str = Field(alias="directoryId")
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
 
@@ -130,5 +150,27 @@ class DirectoryResponse(_CamelSchema):
     name: str
     code: str
     location: Location
+    site_id: str = Field(alias="siteId")
+    parent_directory_id: str | None = Field(default=None, alias="parentDirectoryId")
+    created_at: datetime | None = Field(default=None, alias="createdAt")
+    updated_at: datetime | None = Field(default=None, alias="updatedAt")
+
+
+class SiteResponse(_CamelSchema):
+    id: str
+    name: str
+    active: bool
+    address: str | None = None
+    created_at: datetime | None = Field(default=None, alias="createdAt")
+    updated_at: datetime | None = Field(default=None, alias="updatedAt")
+
+
+class EmployeeAssignmentResponse(_CamelSchema):
+    id: str
+    employee_id: str = Field(alias="employeeId")
+    directory_id: str = Field(alias="directoryId")
+    site_id: str = Field(alias="siteId")
+    start_date: date = Field(alias="startDate")
+    end_date: date | None = Field(default=None, alias="endDate")
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")

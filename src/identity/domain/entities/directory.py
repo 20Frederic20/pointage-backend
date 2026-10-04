@@ -5,7 +5,7 @@ from typing import Self
 from core.domain.entity import AggregateRoot
 
 from ..events import DirectoryCreated
-from ..value_objects.ids import DirectoryId
+from ..value_objects.ids import DirectoryId, SiteId
 from ..value_objects.location import Location
 
 
@@ -15,7 +15,7 @@ class Directory(AggregateRoot[DirectoryId]):
     code and the seat limit that caps how many members can be invited.
     """
 
-    __slots__ = ("_code", "_location", "_name")
+    __slots__ = ("_code", "_location", "_name", "_parent_directory_id", "_site_id")
 
     def __init__(
         self,
@@ -24,6 +24,8 @@ class Directory(AggregateRoot[DirectoryId]):
         name: str,
         code: str,
         location: Location,
+        site_id: SiteId,
+        parent_directory_id: DirectoryId | None = None,
         created_at=None,
         updated_at=None,
         version: int = 0,
@@ -35,6 +37,8 @@ class Directory(AggregateRoot[DirectoryId]):
         self._name = name.strip()
         self._code = code
         self._location = location
+        self._site_id = site_id
+        self._parent_directory_id = parent_directory_id
 
     @classmethod
     def create(
@@ -43,12 +47,21 @@ class Directory(AggregateRoot[DirectoryId]):
         *,
         code: str,
         name: str,
-        location: Location
+        location: Location,
+        site_id: SiteId,
+        parent_directory_id: DirectoryId | None = None,
     ) -> Self:
         """
         Factory for a brand-new directory; records: class:`DirectoryCreated`.
         """
-        directory = cls(directory_id, code=code, name=name, location=location)
+        directory = cls(
+            directory_id,
+            code=code,
+            name=name,
+            location=location,
+            site_id=site_id,
+            parent_directory_id=parent_directory_id,
+        )
         directory.record_event(DirectoryCreated(directory_id))
         return directory
 
@@ -83,3 +96,12 @@ class Directory(AggregateRoot[DirectoryId]):
     @property
     def location(self) -> Location:
         return self._location
+
+    @property
+    def site_id(self) -> SiteId:
+        return self._site_id
+
+    @property
+    def parent_directory_id(self) -> DirectoryId | None:
+        """The directory this one sits under, if any."""
+        return self._parent_directory_id

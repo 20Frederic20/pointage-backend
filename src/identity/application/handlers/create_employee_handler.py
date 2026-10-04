@@ -1,15 +1,21 @@
-"""Renaming the employee."""
+"""Create an employee and their first assignment to a directory."""
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from core.application import CommandHandler, IUnitOfWork
 from core.application.outbox import IEventOutbox
 from core.domain.entity import AggregateRoot
-from identity.domain import EmployeeId, UserId, DirectoryId, Role
-from identity.domain.errors.errors import EmployeeWithThisNumberAlreadyExistsError
+from identity.domain import DirectoryId, EmployeeAssignmentId, EmployeeId, Role, UserId
+from identity.domain.errors.errors import EmployeeWithThisNumberAlreadyExistsError, SiteInactiveError
 
-from ...domain.entities import Employee
-from ...domain.repositories import IEmployeeRepository
+from ...domain.entities import Employee, EmployeeAssignment
+from ...domain.repositories import (
+    IDirectoryRepository,
+    IEmployeeAssignmentRepository,
+    IEmployeeRepository,
+    ISiteRepository,
+)
 from ..commands import CreateEmployeeCommand
 from ..dtos import EmployeeDTO
 
@@ -22,32 +28,51 @@ class CreateEmployeeHandler(
         *,
         unit_of_work: IUnitOfWork,
         employee_repository: IEmployeeRepository,
+        employee_assignment_repository: IEmployeeAssignmentRepository,
+        directory_repository: IDirectoryRepository,
+        site_repository: ISiteRepository,
         event_outbox: IEventOutbox | None = None,
     ) -> None:
         super().__init__(unit_of_work=unit_of_work, event_outbox=event_outbox)
         self._employees = employee_repository
+        self._assignments = employee_assignment_repository
+        self._directories = directory_repository
+        self._sites = site_repository
 
     async def _execute(
         self, request: CreateEmployeeCommand
     ) -> tuple[EmployeeDTO, Sequence[AggregateRoot]]:
-        employee = await self._employees.exists_by_employee_number(request.employee_number)
-        if employee:
+        if await self._employees.exists_by_employee_number(request.employee_number):
             raise EmployeeWithThisNumberAlreadyExistsError(
-                "Une entité portant le même code existe déjà"
+                f"An employee with number {request.employee_number!r} already exists",
+                context=request.employee_number,
             )
+        directory = await self._directories.get_by_id(DirectoryId(request.directory_id))
+        site = await self._sites.get_by_id(directory.site_id)
+        if not site.active:
+            raise SiteInactiveError(f"Site {site.name!r} is not active", context=site.id.value)
+
         employee = Employee.create(
             employee_id=EmployeeId.generate(),
             employee_number=request.employee_number,
             user_id=UserId(request.user_id),
-            directory_id=DirectoryId(request.directory_id),
             phone=request.phone,
             role=Role(request.role),
             is_active=request.is_active if request.is_active else False,
         )
-        return EmployeeDTO.from_aggregate(employee), [employee]
+        assignment = EmployeeAssignment.assign(
+            EmployeeAssignmentId.generate(),
+            employee_id=employee.id,
+            directory_id=directory.id,
+            site_id=directory.site_id,
+            start_date=request.assignment_start_date or datetime.now(UTC).date(),
+        )
+        return EmployeeDTO.from_aggregate(employee), [employee, assignment]
 
     async def _persist(self, aggregate: AggregateRoot) -> None:
         if isinstance(aggregate, Employee):
             await self._employees.save(aggregate)
+        elif isinstance(aggregate, EmployeeAssignment):
+            await self._assignments.save(aggregate)
         else:  # pragma: no cover - guarded by the aggregates _execute returns
             raise TypeError(f"Unexpected aggregate {type(aggregate).__name__}")

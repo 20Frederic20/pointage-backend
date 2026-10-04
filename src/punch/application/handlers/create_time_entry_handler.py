@@ -1,15 +1,16 @@
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.domain.entity import AggregateRoot
 from core.domain.errors import NotFoundError
 from identity.domain.entities import Employee, Directory
-from identity.domain.repositories import IEmployeeRepository, IDirectoryRepository
+from identity.domain.repositories import IDirectoryRepository, IEmployeeAssignmentRepository, IEmployeeRepository
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
 from punch.domain import TimeEntryId, LocationConfidence
 from punch.domain.entities import TimeEntry
-from punch.domain.errors import EmployeeHasAlreadyPunchedThisTypeOfEntryError
+from punch.domain.errors import EmployeeHasAlreadyPunchedThisTypeOfEntryError, EmployeeNotAssignedError
 from punch.domain.repositories import ITimeEntryRepository
 from punch.domain.services.distance_calculator import DistanceCalculator
 
@@ -24,21 +25,28 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         time_entry_repository: ITimeEntryRepository,
         employee_repository: IEmployeeRepository,
         directory_repository: IDirectoryRepository,
+        employee_assignment_repository: IEmployeeAssignmentRepository,
         event_outbox: IEventOutbox | None = None,
     ) -> None:
         super().__init__(unit_of_work=unit_of_work, event_outbox=event_outbox)
         self.time_entry_repository = time_entry_repository
         self.employee_repository = employee_repository
         self.directory_repository = directory_repository
+        self.employee_assignment_repository = employee_assignment_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
         employee: Employee | None = await self.employee_repository.find_by_employee_number(request.employee_number)
         if not employee:
             raise NotFoundError(f"Employee with number {request.employee_number} not found")
 
-        directory: Directory | None = await self.directory_repository.get_by_id(employee.directory_id)
-        if not directory:
-            raise NotFoundError(f"Directory with id {employee.directory_id} not found")
+        # The reference location is the directory of the assignment covering today.
+        assignment = await self.employee_assignment_repository.find_active(employee.id, datetime.now(UTC).date())
+        if assignment is None:
+            raise EmployeeNotAssignedError(
+                f"Employee {request.employee_number} has no active assignment today",
+                context=employee.id.value,
+            )
+        directory: Directory = await self.directory_repository.get_by_id(assignment.directory_id)
 
         distance = DistanceCalculator.calculate(
             latitude_1=request.location.latitude,

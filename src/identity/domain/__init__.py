@@ -11,14 +11,16 @@ from .errors.errors import (
     RegistrationClosedError,
     RolePermissionDeniedError,
 )
-from .value_objects import DirectoryId, EmployeeId, Role, UserId
+from .value_objects import DirectoryId, EmployeeAssignmentId, EmployeeId, Role, SiteId, UserId
 
 __all__ = [
     "DirectoryId",
     "EmailAlreadyRegisteredError",
+    "EmployeeAssignmentId",
     "EmployeeId",
     "RegistrationClosedError",
     "Role",
     "RolePermissionDeniedError",
+    "SiteId",
     "UserId",
 ]

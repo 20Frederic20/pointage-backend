@@ -2,7 +2,13 @@
 handlers, DTOs, and integration-event plumbing."""
 
 from .commands import (
+    ActivateSiteCommand,
+    AssignEmployeeCommand,
+    CreateDirectoryCommand,
     CreateEmployeeCommand,
+    CreateSiteCommand,
+    DeactivateSiteCommand,
+    EndEmployeeAssignmentCommand,
     DeactivateUserCommand,
     RecordUserActivityCommand,
     RegisterUserCommand,
@@ -18,14 +24,23 @@ from .consumers import (
 )
 from .dtos import (
     DirectoryDTO,
+    EmployeeAssignmentDTO,
     EmployeeDTO,
     EmployeesPageDTO,
+    SiteDTO,
     UserCredentialsDTO,
     UserDTO,
     UsersPageDTO,
 )
 from .handlers import (
+    ActivateSiteHandler,
+    AssignEmployeeHandler,
     CreateEmployeeHandler,
+    CreateSiteHandler,
+    DeactivateSiteHandler,
+    EndEmployeeAssignmentHandler,
+    GetEmployeeAssignmentsHandler,
+    GetSiteByIdHandler,
     DeactivateUserHandler,
     GetDirectoryByIdHandler,
     GetUserByEmailHandler,
@@ -39,6 +54,8 @@ from .notifications import USERS_EVENT_MAPPERS
 from .ports import PasswordHasher
 from .queries import (
     GetDirectoryByIdQuery,
+    GetEmployeeAssignmentsQuery,
+    GetSiteByIdQuery,
     GetEmployeeByEmployeeNumberQuery,
     GetEmployeeByIdQuery,
     GetEmployeesQuery,
@@ -49,6 +66,23 @@ from .queries import (
 
 __all__ = [
     "USERS_EVENT_MAPPERS",
+    "ActivateSiteCommand",
+    "ActivateSiteHandler",
+    "AssignEmployeeCommand",
+    "AssignEmployeeHandler",
+    "CreateDirectoryCommand",
+    "CreateSiteCommand",
+    "CreateSiteHandler",
+    "DeactivateSiteCommand",
+    "DeactivateSiteHandler",
+    "EmployeeAssignmentDTO",
+    "EndEmployeeAssignmentCommand",
+    "EndEmployeeAssignmentHandler",
+    "GetEmployeeAssignmentsHandler",
+    "GetEmployeeAssignmentsQuery",
+    "GetSiteByIdHandler",
+    "GetSiteByIdQuery",
+    "SiteDTO",
     "CreateEmployeeCommand",
     "CreateEmployeeHandler",
     "DeactivateUserCommand",

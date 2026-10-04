@@ -28,12 +28,26 @@ from identity.infrastructure.persistence.employee_repository import EmployeeRepo
 
 from ..application import (
     USERS_EVENT_MAPPERS,
+    ActivateSiteCommand,
+    ActivateSiteHandler,
+    AssignEmployeeCommand,
+    AssignEmployeeHandler,
     CreateEmployeeCommand,
     CreateEmployeeHandler,
+    CreateSiteCommand,
+    CreateSiteHandler,
+    DeactivateSiteCommand,
+    DeactivateSiteHandler,
     DeactivateUserCommand,
     DeactivateUserHandler,
+    EndEmployeeAssignmentCommand,
+    EndEmployeeAssignmentHandler,
     GetDirectoryByIdHandler,
     GetDirectoryByIdQuery,
+    GetEmployeeAssignmentsHandler,
+    GetEmployeeAssignmentsQuery,
+    GetSiteByIdHandler,
+    GetSiteByIdQuery,
     GetUserByEmailHandler,
     GetUserByEmailQuery,
     GetUserByIdHandler,
@@ -49,6 +63,8 @@ from ..application import (
 )
 from ..application.ports import PasswordHasher
 from .persistence.directory_repository import DirectoryRepository
+from .persistence.employee_assignment_repository import EmployeeAssignmentRepository
+from .persistence.site_repository import SiteRepository
 from .persistence.user_repository import UserRepository
 
 
@@ -59,6 +75,8 @@ class UsersContainer:
     user_repository: UserRepository
     directory_repository: DirectoryRepository
     employee_repository: EmployeeRepository
+    site_repository: SiteRepository
+    employee_assignment_repository: EmployeeAssignmentRepository
     unit_of_work: IUnitOfWork
     event_bus: IEventBus[BaseEvent]
     password_hasher: PasswordHasher
@@ -69,6 +87,11 @@ class UsersContainer:
         request_map = RequestMap()
         request_map.bind(CreateDirectoryCommand, CreateDirectoryHandler)
         request_map.bind(CreateEmployeeCommand, CreateEmployeeHandler)
+        request_map.bind(CreateSiteCommand, CreateSiteHandler)
+        request_map.bind(ActivateSiteCommand, ActivateSiteHandler)
+        request_map.bind(DeactivateSiteCommand, DeactivateSiteHandler)
+        request_map.bind(AssignEmployeeCommand, AssignEmployeeHandler)
+        request_map.bind(EndEmployeeAssignmentCommand, EndEmployeeAssignmentHandler)
         request_map.bind(RegisterUserCommand, RegisterUserHandler)
         request_map.bind(UpdateUserProfileCommand, UpdateUserProfileHandler)
         request_map.bind(DeactivateUserCommand, DeactivateUserHandler)
@@ -77,6 +100,8 @@ class UsersContainer:
         request_map.bind(GetUserByIdQuery, GetUserByIdHandler)
         request_map.bind(GetUsersQuery, GetUsersHandler)
         request_map.bind(GetDirectoryByIdQuery, GetDirectoryByIdHandler)
+        request_map.bind(GetSiteByIdQuery, GetSiteByIdHandler)
+        request_map.bind(GetEmployeeAssignmentsQuery, GetEmployeeAssignmentsHandler)
 
         self._mediator = ApplicationMediator(
             request_map=request_map,
@@ -107,12 +132,37 @@ class UsersContainer:
             return CreateDirectoryHandler(
                 unit_of_work=self.unit_of_work,
                 directory_repository=self.directory_repository,
+                site_repository=self.site_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is CreateEmployeeHandler:
             return CreateEmployeeHandler(
                 unit_of_work=self.unit_of_work,
                 employee_repository=self.employee_repository,
+                employee_assignment_repository=self.employee_assignment_repository,
+                directory_repository=self.directory_repository,
+                site_repository=self.site_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type in (CreateSiteHandler, ActivateSiteHandler, DeactivateSiteHandler):
+            return handler_type(
+                unit_of_work=self.unit_of_work,
+                site_repository=self.site_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is AssignEmployeeHandler:
+            return AssignEmployeeHandler(
+                unit_of_work=self.unit_of_work,
+                employee_assignment_repository=self.employee_assignment_repository,
+                employee_repository=self.employee_repository,
+                directory_repository=self.directory_repository,
+                site_repository=self.site_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is EndEmployeeAssignmentHandler:
+            return EndEmployeeAssignmentHandler(
+                unit_of_work=self.unit_of_work,
+                employee_assignment_repository=self.employee_assignment_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is GetUserByEmailHandler:
@@ -124,6 +174,12 @@ class UsersContainer:
         if handler_type is GetDirectoryByIdHandler:
             return GetDirectoryByIdHandler(
                 directory_repository=self.directory_repository
+            )
+        if handler_type is GetSiteByIdHandler:
+            return GetSiteByIdHandler(site_repository=self.site_repository)
+        if handler_type is GetEmployeeAssignmentsHandler:
+            return GetEmployeeAssignmentsHandler(
+                employee_assignment_repository=self.employee_assignment_repository
             )
         raise TypeError(
             f"No users-scope wiring for handler {handler_type.__name__}"
@@ -146,6 +202,8 @@ def build_users_container(
         user_repository=UserRepository(session),
         directory_repository=DirectoryRepository(session),
         employee_repository=EmployeeRepository(session),
+        site_repository=SiteRepository(session),
+        employee_assignment_repository=EmployeeAssignmentRepository(session),
         unit_of_work=SQLAlchemyUnitOfWork(session),
         event_bus=event_bus,
         password_hasher=password_hasher,

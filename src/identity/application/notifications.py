@@ -16,7 +16,12 @@ from core.domain.events import BaseEvent
 
 from ..domain.events import (
     DirectoryCreated,
+    EmployeeAssigned,
+    EmployeeAssignmentEnded,
     EmployeeCreated,
+    SiteActivated,
+    SiteCreated,
+    SiteDeactivated,
     UserDeactivated,
     UserRegistered,
     UserRoleChanged,
@@ -47,6 +52,31 @@ class UserRoleChangedNotification(DCNotificationEvent[dict]):
 
 @dataclass(frozen=True)
 class UserDeactivatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class SiteCreatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class SiteActivatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class SiteDeactivatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class EmployeeAssignedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class EmployeeAssignmentEndedNotification(DCNotificationEvent[dict]):
     pass
 
 
@@ -117,12 +147,45 @@ def to_user_deactivated(event: UserDeactivated) -> UserDeactivatedNotification:
     )
 
 
+def to_site_created(event: SiteCreated) -> SiteCreatedNotification:
+    return _notification(SiteCreatedNotification, event, {"site_id": event.get_aggregate_id().value})
+
+
+def to_site_activated(event: SiteActivated) -> SiteActivatedNotification:
+    return _notification(SiteActivatedNotification, event, {"site_id": event.get_aggregate_id().value})
+
+
+def to_site_deactivated(event: SiteDeactivated) -> SiteDeactivatedNotification:
+    return _notification(SiteDeactivatedNotification, event, {"site_id": event.get_aggregate_id().value})
+
+
+def to_employee_assigned(event: EmployeeAssigned) -> EmployeeAssignedNotification:
+    return _notification(
+        EmployeeAssignedNotification,
+        event,
+        {"employee_assignment_id": event.get_aggregate_id().value},
+    )
+
+
+def to_employee_assignment_ended(event: EmployeeAssignmentEnded) -> EmployeeAssignmentEndedNotification:
+    return _notification(
+        EmployeeAssignmentEndedNotification,
+        event,
+        {"employee_assignment_id": event.get_aggregate_id().value},
+    )
+
+
 USERS_EVENT_MAPPERS: dict[type, object] = {
     DirectoryCreated: to_directory_created,
     EmployeeCreated: to_employee_created,
     UserRegistered: to_user_registered,
     UserRoleChanged: to_user_role_changed,
     UserDeactivated: to_user_deactivated,
+    SiteCreated: to_site_created,
+    SiteActivated: to_site_activated,
+    SiteDeactivated: to_site_deactivated,
+    EmployeeAssigned: to_employee_assigned,
+    EmployeeAssignmentEnded: to_employee_assignment_ended,
 }
 
 USERS_EVENT_REGISTRY: dict[str, type] = {
@@ -131,4 +194,9 @@ USERS_EVENT_REGISTRY: dict[str, type] = {
     "users.user.registered": UserRegisteredNotification,
     "users.user.role_changed": UserRoleChangedNotification,
     "users.user.deactivated": UserDeactivatedNotification,
+    "users.site.created": SiteCreatedNotification,
+    "users.site.activated": SiteActivatedNotification,
+    "users.site.deactivated": SiteDeactivatedNotification,
+    "users.employee_assignment.created": EmployeeAssignedNotification,
+    "users.employee_assignment.ended": EmployeeAssignmentEndedNotification,
 }

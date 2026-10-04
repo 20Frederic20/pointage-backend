@@ -13,7 +13,12 @@ from cqrs.events import EventHandler
 
 from .notifications import (
     DirectoryCreatedNotification,
+    EmployeeAssignedNotification,
+    EmployeeAssignmentEndedNotification,
     EmployeeCreatedNotification,
+    SiteActivatedNotification,
+    SiteCreatedNotification,
+    SiteDeactivatedNotification,
     UserDeactivatedNotification,
     UserRegisteredNotification,
     UserRoleChangedNotification,
@@ -28,7 +33,10 @@ def _log(notification) -> None:
         notification.event_name,
         notification.event_id,
         notification.payload.get("directory_id")
-        or notification.payload.get("user_id"),
+        or notification.payload.get("user_id")
+        or notification.payload.get("employee_id")
+        or notification.payload.get("site_id")
+        or notification.payload.get("employee_assignment_id"),
     )
 
 
@@ -61,10 +69,40 @@ class UserDeactivatedConsumer(EventHandler[UserDeactivatedNotification]):
         _log(event)
 
 
+class SiteCreatedConsumer(EventHandler[SiteCreatedNotification]):
+    async def handle(self, event: SiteCreatedNotification) -> None:
+        _log(event)
+
+
+class SiteActivatedConsumer(EventHandler[SiteActivatedNotification]):
+    async def handle(self, event: SiteActivatedNotification) -> None:
+        _log(event)
+
+
+class SiteDeactivatedConsumer(EventHandler[SiteDeactivatedNotification]):
+    async def handle(self, event: SiteDeactivatedNotification) -> None:
+        _log(event)
+
+
+class EmployeeAssignedConsumer(EventHandler[EmployeeAssignedNotification]):
+    async def handle(self, event: EmployeeAssignedNotification) -> None:
+        _log(event)
+
+
+class EmployeeAssignmentEndedConsumer(EventHandler[EmployeeAssignmentEndedNotification]):
+    async def handle(self, event: EmployeeAssignmentEndedNotification) -> None:
+        _log(event)
+
+
 USERS_CONSUMERS: dict[type, type] = {
     DirectoryCreatedNotification: DirectoryCreatedConsumer,
     EmployeeCreatedNotification: EmployeeCreatedConsumer,
     UserRegisteredNotification: UserRegisteredConsumer,
     UserRoleChangedNotification: UserRoleChangedConsumer,
     UserDeactivatedNotification: UserDeactivatedConsumer,
+    SiteCreatedNotification: SiteCreatedConsumer,
+    SiteActivatedNotification: SiteActivatedConsumer,
+    SiteDeactivatedNotification: SiteDeactivatedConsumer,
+    EmployeeAssignedNotification: EmployeeAssignedConsumer,
+    EmployeeAssignmentEndedNotification: EmployeeAssignmentEndedConsumer,
 }

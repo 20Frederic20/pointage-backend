@@ -15,3 +15,11 @@ class EmployeeId(EntityId[Literal["employee"]]):
 
 class DirectoryId(EntityId[Literal["directory"]]):
     """Identity of a directory (top-level tenant)."""
+
+
+class SiteId(EntityId[Literal["site"]]):
+    """Identity of a site (a physical place directories belong to)."""
+
+
+class EmployeeAssignmentId(EntityId[Literal["employee_assignment"]]):
+    """Identity of an employee's assignment to a directory."""

@@ -1,4 +1,4 @@
-"""Renaming the workspace."""
+"""Create a directory under a site, optionally inside a parent directory."""
 
 from dataclasses import dataclass
 
@@ -11,3 +11,5 @@ class CreateDirectoryCommand(Command):
     name: str
     code: str
     location: Location
+    site_id: str
+    parent_directory_id: str | None = None

@@ -25,6 +25,14 @@ class PunchConflictError(DomainError):
     severity = Severity.WARNING
 
 
+class EmployeeNotAssignedError(DomainError):
+    """Raised when an employee punches without an assignment covering today."""
+
+    code = "EMPLOYEE_NOT_ASSIGNED"
+    http_status = 409
+    severity = Severity.WARNING
+
+
 class EmployeeHasAlreadyPunchedThisTypeOfEntryError(DomainError):
     """Raised when an employee has already punched this type of entry."""
 

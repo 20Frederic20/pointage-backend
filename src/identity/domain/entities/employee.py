@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Self
 
 from core.domain.entity import AggregateRoot
-from identity.domain import DirectoryId, EmployeeId, Role, UserId
+from identity.domain import EmployeeId, Role, UserId
 from identity.domain.events import EmployeeCreated
 
 
@@ -12,14 +12,13 @@ def _utcnow() -> datetime:
 
 class Employee(AggregateRoot[EmployeeId]):
 
-    __slots__ = ("_directory_id", "_employee_number", "_is_active", "_phone", "_role", "_user_id", "_employee_id",)
+    __slots__ = ("_employee_number", "_is_active", "_phone", "_role", "_user_id", "_employee_id",)
 
     def __init__ (
         self,
         employee_id: EmployeeId,
         *,
         user_id: UserId,
-        directory_id: DirectoryId,
         employee_number: str,
         is_active: bool,
         phone: str | None = None,
@@ -35,7 +34,6 @@ class Employee(AggregateRoot[EmployeeId]):
         self._user_id = user_id
         self._employee_id  = employee_id
         self._employee_number = employee_number
-        self._directory_id = directory_id
         self._role = role
         self._is_active =  is_active
         self._phone = phone
@@ -46,7 +44,6 @@ class Employee(AggregateRoot[EmployeeId]):
         employee_id: EmployeeId,
         *,
         user_id: UserId,
-        directory_id: DirectoryId,
         employee_number: str,
         is_active: bool,
         phone: str | None = None,
@@ -58,7 +55,6 @@ class Employee(AggregateRoot[EmployeeId]):
         employee = cls(
             employee_id,
             user_id=user_id,
-            directory_id=directory_id,
             role=role,
             employee_number=employee_number,
             is_active=is_active,
@@ -69,7 +65,7 @@ class Employee(AggregateRoot[EmployeeId]):
 
     def update (
         self,
-        *
+        *,
         employee_number: str | None,
         is_active: bool | None,
         phone: str | None,
@@ -86,10 +82,6 @@ class Employee(AggregateRoot[EmployeeId]):
     @property
     def user_id(self) -> UserId:
         return self._user_id
-
-    @property
-    def directory_id(self) -> DirectoryId:
-        return self._directory_id
 
     @property
     def employee_number(self) -> str:

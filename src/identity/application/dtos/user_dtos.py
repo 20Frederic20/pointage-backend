@@ -77,6 +77,8 @@ class DirectoryDTO(DTO):
     name: str
     code: str
     location: Location
+    site_id: str
+    parent_directory_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -87,6 +89,12 @@ class DirectoryDTO(DTO):
             name=directory.name,
             code=directory.code,
             location=directory.location,
+            site_id=directory.site_id.value,
+            parent_directory_id=(
+                directory.parent_directory_id.value
+                if directory.parent_directory_id is not None
+                else None
+            ),
             created_at=directory.created_at,
             updated_at=directory.updated_at,
         )
