@@ -6,11 +6,19 @@ from core.exceptions import register_exception_handlers
 from core.settings import AppSettings, DatabaseSettings
 from identity.interface.routers import (
     directories_router,
+    employee_assignments_router,
     employees_router,
+    sites_router,
     users_router,
 )
 from lifespan import lifespan
+from periods.interface.routers import periods_router
+from planning.interface.routers import employee_schedules_router, time_profiles_router
 from punch.interface.routers import time_entries_router
+from time_calculation.interface.routers import (
+    calculation_rule_versions_router,
+    daily_time_results_router,
+)
 
 
 def cors_config(allow_origins: list[str]) -> tuple[list[str], bool]:
@@ -57,11 +65,18 @@ def create_app(
     register_exception_handlers(app)
 
     app.include_router(users_router)
+    app.include_router(sites_router)
     app.include_router(directories_router)
     app.include_router(employees_router)
+    app.include_router(employee_assignments_router)
     app.include_router(time_entries_router)
     app.include_router(absence_types_router)
     app.include_router(absences_router)
+    app.include_router(time_profiles_router)
+    app.include_router(employee_schedules_router)
+    app.include_router(periods_router)
+    app.include_router(calculation_rule_versions_router)
+    app.include_router(daily_time_results_router)
     return app
 
 

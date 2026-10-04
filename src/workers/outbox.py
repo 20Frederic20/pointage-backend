@@ -26,13 +26,22 @@ from core.infrastructure.outbox.outbox_relay import SessionFactory
 from identity.application.consumers import USERS_CONSUMERS
 from identity.application.notifications import USERS_EVENT_REGISTRY
 from punch.application.consumers import PUNCHES_CONSUMERS
+from periods.application.consumers import PERIODS_CONSUMERS
+from periods.application.notifications import PERIODS_EVENT_REGISTRY
+from planning.application.consumers import PLANNING_CONSUMERS
+from planning.application.notifications import PLANNING_EVENT_REGISTRY
 from punch.application.notifications import PUNCHES_EVENT_REGISTRY
+from time_calculation.application.consumers import TIME_CALCULATION_CONSUMERS
+from time_calculation.application.notifications import TIME_CALCULATION_EVENT_REGISTRY
 
 _EVENT_MAP = {
     **USERS_CONSUMERS,
     **PUNCHES_CONSUMERS,
     **ADJUSTMENTS_CONSUMERS,
     **ABSENCES_CONSUMERS,
+    **PLANNING_CONSUMERS,
+    **PERIODS_CONSUMERS,
+    **TIME_CALCULATION_CONSUMERS,
 }
 
 _CONSUMER_FACTORIES = {
@@ -45,6 +54,9 @@ _EVENT_REGISTRY = {
     **PUNCHES_EVENT_REGISTRY,
     **ADJUSTMENTS_EVENT_REGISTRY,
     **ABSENCES_EVENT_REGISTRY,
+    **PLANNING_EVENT_REGISTRY,
+    **PERIODS_EVENT_REGISTRY,
+    **TIME_CALCULATION_EVENT_REGISTRY,
 }
 
 
