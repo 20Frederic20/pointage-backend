@@ -1,10 +1,16 @@
-from adjustements.domain import IAnomalyRepository, Anomaly, AnomalyId
+from datetime import datetime
+
+from adjustements.domain import IAnomalyRepository, Anomaly, AnomalyId, AnomalyStatus, Severity
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, insert, select, update
 
 from core.domain.errors import ConflictError, NotFoundError
 from .models import AnomalyModel
+from identity.domain import EmployeeId
 from punch.domain import TimeEntryId
+from punch.infrastructure.persistence.models import TimeEntryModel
+
+_OPEN_STATUSES = (AnomalyStatus.OPEN.value, AnomalyStatus.IN_PROGRESS.value)
 
 
 def _to_aggregate(row) -> Anomaly:
@@ -41,6 +47,34 @@ class AnomalyRepository(IAnomalyRepository):
             select(AnomalyModel.id).where(AnomalyModel.id == aggregate_id.value)
         )
         return row is not None
+
+    async def exists_open_blocking_between(self, start: datetime, end: datetime) -> bool:
+        row = await self._session.scalar(
+            select(AnomalyModel.id)
+            .where(
+                AnomalyModel.severity == Severity.BLOCKING.value,
+                AnomalyModel.status.in_(_OPEN_STATUSES),
+                AnomalyModel.detected_at >= start,
+                AnomalyModel.detected_at < end,
+            )
+            .limit(1)
+        )
+        return row is not None
+
+    async def find_open_by_employee_between(
+        self, employee_id: EmployeeId, start: datetime, end: datetime
+    ) -> list[Anomaly]:
+        rows = await self._session.scalars(
+            select(AnomalyModel)
+            .join(TimeEntryModel, TimeEntryModel.id == AnomalyModel.time_entry_id)
+            .where(
+                TimeEntryModel.employee_id == employee_id.value,
+                AnomalyModel.status.in_(_OPEN_STATUSES),
+                AnomalyModel.detected_at >= start,
+                AnomalyModel.detected_at < end,
+            )
+        )
+        return [_to_aggregate(row) for row in rows.all()]
 
     async def exists_any(self) -> bool:
         row = await self._session.scalar(select(AnomalyModel.id).limit(1))
