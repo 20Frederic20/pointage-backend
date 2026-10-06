@@ -56,7 +56,7 @@ class UserCredentialsDTO(DTO):
 
     id: str
     email: str
-    password_hash: str
+    password_hash: str | None
     role: Role
     is_active: bool
 

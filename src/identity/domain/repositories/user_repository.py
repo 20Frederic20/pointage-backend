@@ -37,6 +37,11 @@ class IUserRepository(IRepository[User, UserId]):
         ...
 
     @abstractmethod
+    async def exists_any(self) -> bool:
+        """Whether at least one account exists — the public-signup gate."""
+        ...
+
+    @abstractmethod
     async def count_active(self) -> int:
         """
         Active members of the workspace — the number a seat is bought against.

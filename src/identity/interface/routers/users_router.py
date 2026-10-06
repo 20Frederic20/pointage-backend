@@ -1,13 +1,17 @@
-"""User-facing routes: bootstrap signup and invite redemption (public).
+"""User-facing routes: account creation.
 
-The authenticated routes (listing, profiles, role changes, deactivation)
-join this routers with the auth context's guards in a later slice — see the
-route table in ``social_crm_ddd_architecture.md``.
+The other authenticated routes (listing, profiles, role changes,
+deactivation) join this router with the auth context's guards in a later
+slice.
 """
 
 from fastapi import APIRouter, Depends, status
 
+from auth.application.dtos import PrincipalDTO
+from auth.interface import get_current_principal, get_optional_principal
+
 from ...application import (
+    ClearUserPasswordCommand,
     RegisterUserCommand,
 )
 from ...infrastructure import UsersContainer
@@ -33,10 +37,12 @@ def _user_response(dto) -> UserResponse:
 async def register(
     payload: RegisterRequest,
     users: UsersContainer = Depends(get_users),  # noqa: B008
+    principal: PrincipalDTO | None = Depends(get_optional_principal),  # noqa: B008
 ) -> UserResponse:
-    """Bootstrap signup: create the first workspace and its ADMIN.
+    """Create an account.
 
-    Closes with ``403 REGISTRATION_CLOSED`` once any workspace exists.
+    Public while no account exists (the founding ADMIN); afterwards it needs
+    an ADMIN access token, otherwise ``403 REGISTRATION_CLOSED``.
     """
     dto = await users.send(
         RegisterUserCommand(
@@ -45,6 +51,22 @@ async def register(
             first_name=payload.first_name,
             last_name=payload.last_name,
             directory_name=payload.directory_name,
+            role=payload.role,
+            requested_by_role=principal.role if principal else None,
         )
+    )
+    return _user_response(dto)
+
+
+@router.post("/{user_id}/password/clear", response_model=UserResponse)
+async def clear_password(
+    user_id: str,
+    users: UsersContainer = Depends(get_users),  # noqa: B008
+    principal: PrincipalDTO = Depends(get_current_principal),  # noqa: B008
+) -> UserResponse:
+    """Remove a member's password (ADMIN only): they log in with an emailed
+    code from now on. Also the way out of a forgotten password."""
+    dto = await users.send(
+        ClearUserPasswordCommand(user_id=user_id, actor_id=principal.user_id)
     )
     return _user_response(dto)

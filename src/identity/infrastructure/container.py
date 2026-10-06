@@ -32,6 +32,8 @@ from ..application import (
     ActivateSiteHandler,
     AssignEmployeeCommand,
     AssignEmployeeHandler,
+    ClearUserPasswordCommand,
+    ClearUserPasswordHandler,
     CreateEmployeeCommand,
     CreateEmployeeHandler,
     CreateSiteCommand,
@@ -95,6 +97,7 @@ class UsersContainer:
         request_map.bind(RegisterUserCommand, RegisterUserHandler)
         request_map.bind(UpdateUserProfileCommand, UpdateUserProfileHandler)
         request_map.bind(DeactivateUserCommand, DeactivateUserHandler)
+        request_map.bind(ClearUserPasswordCommand, ClearUserPasswordHandler)
         request_map.bind(RecordUserActivityCommand, RecordUserActivityHandler)
         request_map.bind(GetUserByEmailQuery, GetUserByEmailHandler)
         request_map.bind(GetUserByIdQuery, GetUserByIdHandler)
@@ -119,6 +122,7 @@ class UsersContainer:
                 event_outbox=self.event_outbox,
             )
         if handler_type in (
+            ClearUserPasswordHandler,
             DeactivateUserHandler,
             RecordUserActivityHandler,
             UpdateUserProfileHandler,

@@ -24,10 +24,13 @@ class _CamelSchema(BaseModel):
 
 class RegisterRequest(_CamelSchema):
     email: EmailStr
-    password: str = Field(min_length=8)
+    # Omitted: the account logs in with a code sent by email.
+    password: str | None = Field(default=None, min_length=8)
     first_name: str | None = None
     last_name: str | None = None
     directory_name: str | None = Field(default=None, alias="directoryName")
+    # Ignored for the founding account (always ADMIN); EMPLOYEE when omitted.
+    role: Role | None = None
 
 
 class CreateEmployeeRequest(_CamelSchema):

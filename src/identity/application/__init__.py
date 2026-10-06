@@ -4,6 +4,7 @@ handlers, DTOs, and integration-event plumbing."""
 from .commands import (
     ActivateSiteCommand,
     AssignEmployeeCommand,
+    ClearUserPasswordCommand,
     CreateDirectoryCommand,
     CreateEmployeeCommand,
     CreateSiteCommand,
@@ -35,6 +36,7 @@ from .dtos import (
 from .handlers import (
     ActivateSiteHandler,
     AssignEmployeeHandler,
+    ClearUserPasswordHandler,
     CreateEmployeeHandler,
     CreateSiteHandler,
     DeactivateSiteHandler,
@@ -70,6 +72,8 @@ __all__ = [
     "ActivateSiteHandler",
     "AssignEmployeeCommand",
     "AssignEmployeeHandler",
+    "ClearUserPasswordCommand",
+    "ClearUserPasswordHandler",
     "CreateDirectoryCommand",
     "CreateSiteCommand",
     "CreateSiteHandler",

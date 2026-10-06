@@ -350,3 +350,46 @@ BEGIN
         ALTER TABLE employees DROP COLUMN directory_id;
     END IF;
 END $$;
+
+----------------------------------------------------------------------------
+-- auth : refresh tokens (stockés hachés, rotation par famille)
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id VARCHAR(32) PRIMARY KEY,
+    user_id VARCHAR(32) NOT NULL REFERENCES users(id),
+    token_hash VARCHAR(64) NOT NULL,
+    family_id VARCHAR(32) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    revoked_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version_id INTEGER DEFAULT 1 NOT NULL,
+    CONSTRAINT uq_refresh_tokens_token_hash UNIQUE (token_hash)
+);
+
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id ON refresh_tokens (user_id);
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_family_id ON refresh_tokens (family_id);
+
+----------------------------------------------------------------------------
+-- auth : connexion par code email et session glissante (36 h, 30 jours max)
+
+-- Un compte sans mot de passe se connecte par code envoyé par email.
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+
+-- Fin absolue de la session (30 jours après la connexion), copiée à chaque rotation.
+ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS session_expires_at TIMESTAMP WITH TIME ZONE;
+UPDATE refresh_tokens SET session_expires_at = expires_at WHERE session_expires_at IS NULL;
+ALTER TABLE refresh_tokens ALTER COLUMN session_expires_at SET NOT NULL;
+
+CREATE TABLE IF NOT EXISTS login_codes (
+    id VARCHAR(32) PRIMARY KEY,
+    user_id VARCHAR(32) NOT NULL REFERENCES users(id),
+    code_hash VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    consumed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version_id INTEGER DEFAULT 1 NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_login_codes_user_id ON login_codes (user_id);

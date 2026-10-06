@@ -1,5 +1,6 @@
 from .activate_site import ActivateSiteCommand
 from .assign_employee import AssignEmployeeCommand
+from .clear_user_password import ClearUserPasswordCommand
 from .create_directory import CreateDirectoryCommand
 from .create_employee import CreateEmployeeCommand
 from .create_site import CreateSiteCommand
@@ -14,6 +15,7 @@ from .update_user_profile import UpdateUserProfileCommand
 __all__ = [
     "ActivateSiteCommand",
     "AssignEmployeeCommand",
+    "ClearUserPasswordCommand",
     "CreateDirectoryCommand",
     "CreateEmployeeCommand",
     "CreateSiteCommand",

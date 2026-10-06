@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
+from auth.application.ports import EmailSender, TokenIssuer
 from core.domain.events import BaseEvent
 from core.domain.events.event_bus_schema import IEventBus
 from core.infrastructure.outbox import OutboxRelay
@@ -25,6 +26,8 @@ class AppContainer:
         session_factory: async_sessionmaker[AsyncSession],
         event_bus: IEventBus[BaseEvent],
         outbox_relay: OutboxRelay,
+        token_issuer: TokenIssuer,
+        email_sender: EmailSender,
     ) -> None:
         self.settings = settings
         self.database_settings = database_settings
@@ -32,3 +35,5 @@ class AppContainer:
         self.session_factory = session_factory
         self.event_bus = event_bus
         self.outbox_relay = outbox_relay
+        self.token_issuer = token_issuer
+        self.email_sender = email_sender

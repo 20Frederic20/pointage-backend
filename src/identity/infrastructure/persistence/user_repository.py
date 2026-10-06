@@ -67,6 +67,10 @@ class UserRepository(IUserRepository):
         )
         return await self._session.scalar(stmt) or 0
 
+    async def exists_any(self) -> bool:
+        row = await self._session.scalar(select(UserModel.id).limit(1))
+        return row is not None
+
     async def count_active(self) -> int:
         stmt = (
             select(func.count())

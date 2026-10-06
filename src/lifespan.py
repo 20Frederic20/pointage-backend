@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from auth.infrastructure import JwtTokenIssuer, SmtpEmailSender
 from composition import AppContainer
 from core.infrastructure.database import build_engine, build_session_factory
 from core.infrastructure.events import InProcessEventBus
@@ -41,6 +42,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         session_factory=session_factory,
         event_bus=event_bus,
         outbox_relay=outbox_relay,
+        token_issuer=JwtTokenIssuer(app.state.auth_settings),
+        email_sender=SmtpEmailSender(app.state.mail_settings),
     )
     try:
         yield

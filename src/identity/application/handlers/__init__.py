@@ -1,5 +1,6 @@
 from .activate_site_handler import ActivateSiteHandler
 from .assign_employee_handler import AssignEmployeeHandler
+from .clear_user_password_handler import ClearUserPasswordHandler
 from .create_employee_handler import CreateEmployeeHandler
 from .create_site_handler import CreateSiteHandler
 from .deactivate_site_handler import DeactivateSiteHandler
@@ -18,6 +19,7 @@ from .update_user_profile_handler import UpdateUserProfileHandler
 __all__ = [
     "ActivateSiteHandler",
     "AssignEmployeeHandler",
+    "ClearUserPasswordHandler",
     "CreateEmployeeHandler",
     "CreateSiteHandler",
     "DeactivateSiteHandler",

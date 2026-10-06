@@ -38,7 +38,7 @@ class User(AggregateRoot[UserId]):
         user_id: UserId,
         *,
         email: str,
-        password_hash: str,
+        password_hash: str | None,
         role: Role = Role.EMPLOYEE,
         first_name: str | None = None,
         last_name: str | None = None,
@@ -70,7 +70,7 @@ class User(AggregateRoot[UserId]):
         user_id: UserId,
         *,
         email: str,
-        password_hash: str,
+        password_hash: str | None,
         role: Role = Role.EMPLOYEE,
         first_name: str | None = None,
         last_name: str | None = None,
@@ -133,6 +133,16 @@ class User(AggregateRoot[UserId]):
             self._avatar_url = avatar_url
         self.touch()
 
+    def clear_password(self) -> None:
+        """
+        Remove the password: the account then logs in with an emailed code.
+        Idempotent.
+        """
+        if self._password_hash is None:
+            return
+        self._password_hash = None
+        self.touch()
+
     def record_activity(self) -> None:
         """
         Best-effort presence telemetry (auth calls it on each login/refresh).
@@ -147,7 +157,8 @@ class User(AggregateRoot[UserId]):
         return self._email
 
     @property
-    def password_hash(self) -> str:
+    def password_hash(self) -> str | None:
+        """``None``: no password, the account logs in with an emailed code."""
         return self._password_hash
 
     @property

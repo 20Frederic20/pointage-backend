@@ -44,8 +44,9 @@ class UserModel(BaseModel):
     email: Mapped[str] = mapped_column(
         String(255), nullable=False, unique=True
     )
-    password_hash: Mapped[str] = mapped_column(
-        String(255), nullable=False
+    # NULL: no password, the account logs in with an emailed code.
+    password_hash: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
     )
     role: Mapped[Role] = mapped_column(
         SAEnum(Role, native_enum=False, length=16), nullable=False

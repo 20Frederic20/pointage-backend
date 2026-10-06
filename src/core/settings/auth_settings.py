@@ -13,9 +13,11 @@ class AuthSettings(BaseSettings):
     jwt_secret: str
     jwt_issuer: str = "pointage"
     jwt_algorithm: str = "HS256"
-    # PRD §9.1 — access tokens live 15 minutes, refresh tokens 7 days.
     access_token_ttl_seconds: int = 900
-    refresh_token_ttl_days: int = 7
+    # A session dies after 36 h without activity (evening → morning keeps
+    # it, Friday → Monday does not), and after 30 days whatever happens.
+    refresh_token_idle_hours: int = 36
+    session_max_days: int = 30
 
     model_config = SettingsConfigDict(
         env_file=".env",

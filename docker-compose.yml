@@ -50,6 +50,9 @@ services:
       - '1045:1045'
       - '8045:8045'
     environment:
+      # Mailpit listens on 1025 / 8025 by default: bind it to the published ports.
+      MP_SMTP_BIND_ADDR:           '0.0.0.0:1045'
+      MP_UI_BIND_ADDR:             '0.0.0.0:8045'
       MP_SMTP_AUTH_ACCEPT_ANY:     'true'
       MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
       MP_MAX_MESSAGES:             '500'
