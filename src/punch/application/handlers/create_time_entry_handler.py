@@ -6,8 +6,8 @@ from core.audit import audit
 from core.domain.entity import AggregateRoot
 from core.domain.errors import NotFoundError
 from identity.domain import UserId
-from identity.domain.entities import Employee, Directory
-from identity.domain.repositories import IDirectoryRepository, IEmployeeAssignmentRepository, IEmployeeRepository
+from identity.domain.entities import Employee, Site
+from identity.domain.repositories import IEmployeeAssignmentRepository, IEmployeeRepository, ISiteRepository
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
 from punch.domain import TimeEntryId, LocationConfidence
@@ -17,7 +17,7 @@ from punch.domain.repositories import ITimeEntryRepository
 from punch.domain.services.distance_calculator import DistanceCalculator
 from punch.domain.services.entry_type_resolver import EntryTypeResolver
 
-MAX_DISTANCE_METERS = 100
+MAX_DISTANCE_METERS = 500
 
 
 class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO]):
@@ -29,14 +29,14 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         unit_of_work: IUnitOfWork,
         time_entry_repository: ITimeEntryRepository,
         employee_repository: IEmployeeRepository,
-        directory_repository: IDirectoryRepository,
+        site_repository: ISiteRepository,
         employee_assignment_repository: IEmployeeAssignmentRepository,
         event_outbox: IEventOutbox | None = None,
     ) -> None:
         super().__init__(unit_of_work=unit_of_work, event_outbox=event_outbox)
         self.time_entry_repository = time_entry_repository
         self.employee_repository = employee_repository
-        self.directory_repository = directory_repository
+        self.site_repository = site_repository
         self.employee_assignment_repository = employee_assignment_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
@@ -53,13 +53,13 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
                 f"Employee {employee.employee_number} has no active assignment today",
                 context=employee.id.value,
             )
-        directory: Directory = await self.directory_repository.get_by_id(assignment.directory_id)
+        site: Site = await self.site_repository.get_by_id(assignment.site_id)
 
         distance = DistanceCalculator.calculate(
             latitude_1=request.location.latitude,
             longitude_1=request.location.longitude,
-            latitude_2=directory.location.latitude,
-            longitude_2=directory.location.longitude,
+            latitude_2=site.location.latitude,
+            longitude_2=site.location.longitude,
         )
 
         if distance > MAX_DISTANCE_METERS:
