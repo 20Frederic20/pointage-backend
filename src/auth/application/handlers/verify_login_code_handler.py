@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
+from core.audit import audit
 from core.domain.entity import AggregateRoot
 
 from ...domain.entities import LoginCode, RefreshToken
@@ -50,6 +51,7 @@ class VerifyLoginCodeHandler(CommandHandler[VerifyLoginCodeCommand, TokenPairDTO
         now = datetime.now(UTC)
         code_hash = self._tokens.hash_login_code(user_id=account.id, code=request.code)
         if not login_code.verify(code_hash, now):
+            audit.warning("action=OTP_VERIFY identifier=%s status=FAIL reason=invalid_code", request.identifier)
             return None, [login_code]
 
         raw_refresh_token = self._tokens.new_refresh_token()
@@ -67,6 +69,7 @@ class VerifyLoginCodeHandler(CommandHandler[VerifyLoginCodeCommand, TokenPairDTO
             refresh_token=raw_refresh_token,
             expires_in=self._tokens.access_token_ttl_seconds,
         )
+        audit.info("action=OTP_VERIFY identifier=%s user_id=%s status=OK", request.identifier, account.id)
         return tokens, [login_code, refresh_token]
 
     async def _persist(self, aggregate: AggregateRoot) -> None:

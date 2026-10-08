@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
+from core.audit import audit
 from core.domain.entity import AggregateRoot
 
 from ...domain.entities import LoginCode
@@ -45,13 +46,16 @@ class RequestLoginCodeHandler(CommandHandler[RequestLoginCodeCommand, OutgoingEm
     ) -> tuple[OutgoingEmailDTO | None, Sequence[AggregateRoot]]:
         account = await self._accounts.find_credentials(request.identifier)
         if account is None or not account.is_active or account.password_hash is not None:
+            audit.info("action=OTP_REQUEST identifier=%s status=IGNORED", request.identifier)
             return None, []
 
         now = datetime.now(UTC)
         latest = await self._login_codes.find_latest_for_user(account.id)
         if latest is not None and now - latest.created_at < RESEND_COOLDOWN:
+            audit.warning("action=OTP_REQUEST identifier=%s status=THROTTLED reason=cooldown", request.identifier)
             return None, []
         if await self._login_codes.count_issued_since(account.id, now - timedelta(hours=1)) >= MAX_CODES_PER_HOUR:
+            audit.warning("action=OTP_REQUEST identifier=%s status=THROTTLED reason=hourly_cap", request.identifier)
             return None, []
 
         code = self._tokens.new_login_code()
@@ -72,6 +76,7 @@ class RequestLoginCodeHandler(CommandHandler[RequestLoginCodeCommand, OutgoingEm
                 "If you did not ask for it, ignore this email."
             ),
         )
+        audit.info("action=OTP_REQUEST identifier=%s user_id=%s status=OK", request.identifier, account.id)
         return email, [login_code]
 
     async def _persist(self, aggregate: AggregateRoot) -> None:

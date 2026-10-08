@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
+from core.audit import audit
 from core.domain.entity import AggregateRoot
 from identity.application.ports import PasswordHasher
 
@@ -42,6 +43,7 @@ class LoginHandler(CommandHandler[LoginCommand, TokenPairDTO]):
         hashed = account.password_hash if has_password else self._passwords.dummy_hash
         password_ok = self._passwords.verify(request.password, hashed)
         if not has_password or not password_ok or not account.is_active:
+            audit.warning("action=LOGIN_PASSWORD identifier=%s status=FAIL", request.identifier)
             raise InvalidCredentialsError("Invalid identifier or password")
 
         raw_refresh_token = self._tokens.new_refresh_token()
@@ -59,6 +61,7 @@ class LoginHandler(CommandHandler[LoginCommand, TokenPairDTO]):
             refresh_token=raw_refresh_token,
             expires_in=self._tokens.access_token_ttl_seconds,
         )
+        audit.info("action=LOGIN_PASSWORD identifier=%s user_id=%s status=OK", request.identifier, account.id)
         return tokens, [refresh_token]
 
     async def _persist(self, aggregate: AggregateRoot) -> None:
