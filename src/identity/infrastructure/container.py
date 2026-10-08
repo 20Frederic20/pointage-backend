@@ -46,8 +46,12 @@ from ..application import (
     EndEmployeeAssignmentHandler,
     GetDirectoryByIdHandler,
     GetDirectoryByIdQuery,
+    GetDirectorySitesHandler,
+    GetDirectorySitesQuery,
     GetEmployeeAssignmentsHandler,
     GetEmployeeAssignmentsQuery,
+    GetEmployeeByEmployeeNumberHandler,
+    GetEmployeeByEmployeeNumberQuery,
     GetSiteByIdHandler,
     GetSiteByIdQuery,
     GetUserByEmailHandler,
@@ -56,6 +60,8 @@ from ..application import (
     GetUserByIdQuery,
     GetUsersHandler,
     GetUsersQuery,
+    MakeSitePrincipalCommand,
+    MakeSitePrincipalHandler,
     RecordUserActivityCommand,
     RecordUserActivityHandler,
     RegisterUserCommand,
@@ -92,6 +98,7 @@ class UsersContainer:
         request_map.bind(CreateSiteCommand, CreateSiteHandler)
         request_map.bind(ActivateSiteCommand, ActivateSiteHandler)
         request_map.bind(DeactivateSiteCommand, DeactivateSiteHandler)
+        request_map.bind(MakeSitePrincipalCommand, MakeSitePrincipalHandler)
         request_map.bind(AssignEmployeeCommand, AssignEmployeeHandler)
         request_map.bind(EndEmployeeAssignmentCommand, EndEmployeeAssignmentHandler)
         request_map.bind(RegisterUserCommand, RegisterUserHandler)
@@ -104,7 +111,9 @@ class UsersContainer:
         request_map.bind(GetUsersQuery, GetUsersHandler)
         request_map.bind(GetDirectoryByIdQuery, GetDirectoryByIdHandler)
         request_map.bind(GetSiteByIdQuery, GetSiteByIdHandler)
+        request_map.bind(GetDirectorySitesQuery, GetDirectorySitesHandler)
         request_map.bind(GetEmployeeAssignmentsQuery, GetEmployeeAssignmentsHandler)
+        request_map.bind(GetEmployeeByEmployeeNumberQuery, GetEmployeeByEmployeeNumberHandler)
 
         self._mediator = ApplicationMediator(
             request_map=request_map,
@@ -136,7 +145,6 @@ class UsersContainer:
             return CreateDirectoryHandler(
                 unit_of_work=self.unit_of_work,
                 directory_repository=self.directory_repository,
-                site_repository=self.site_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is CreateEmployeeHandler:
@@ -148,7 +156,14 @@ class UsersContainer:
                 site_repository=self.site_repository,
                 event_outbox=self.event_outbox,
             )
-        if handler_type in (CreateSiteHandler, ActivateSiteHandler, DeactivateSiteHandler):
+        if handler_type is CreateSiteHandler:
+            return CreateSiteHandler(
+                unit_of_work=self.unit_of_work,
+                site_repository=self.site_repository,
+                directory_repository=self.directory_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type in (ActivateSiteHandler, DeactivateSiteHandler, MakeSitePrincipalHandler):
             return handler_type(
                 unit_of_work=self.unit_of_work,
                 site_repository=self.site_repository,
@@ -181,10 +196,17 @@ class UsersContainer:
             )
         if handler_type is GetSiteByIdHandler:
             return GetSiteByIdHandler(site_repository=self.site_repository)
+        if handler_type is GetDirectorySitesHandler:
+            return GetDirectorySitesHandler(
+                site_repository=self.site_repository,
+                directory_repository=self.directory_repository,
+            )
         if handler_type is GetEmployeeAssignmentsHandler:
             return GetEmployeeAssignmentsHandler(
                 employee_assignment_repository=self.employee_assignment_repository
             )
+        if handler_type is GetEmployeeByEmployeeNumberHandler:
+            return GetEmployeeByEmployeeNumberHandler(employee_repository=self.employee_repository)
         raise TypeError(
             f"No users-scope wiring for handler {handler_type.__name__}"
         )

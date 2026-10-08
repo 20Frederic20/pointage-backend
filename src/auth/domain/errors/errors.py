@@ -4,7 +4,7 @@ from core.domain.errors import DomainError, Severity
 class InvalidCredentialsError(DomainError):
     """Raised on a failed login.
 
-    One error for an unknown email, a wrong password and an inactive account,
+    One error for an unknown identifier, a wrong password and an inactive account,
     so the response never tells which accounts exist.
     """
 
@@ -24,7 +24,7 @@ class InvalidRefreshTokenError(DomainError):
 class InvalidLoginCodeError(DomainError):
     """Raised when an emailed login code is wrong, expired, used or exhausted.
 
-    One error for every case, an unknown email included.
+    One error for every case, an unknown identifier included.
     """
 
     code = "INVALID_LOGIN_CODE"

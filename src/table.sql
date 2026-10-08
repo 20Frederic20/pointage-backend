@@ -304,15 +304,25 @@ CREATE TABLE IF NOT EXISTS sites (
 );
 
 -- Existing directories get a default site so site_id can be NOT NULL.
-INSERT INTO sites (id, name)
-SELECT 'defaultsite', 'Default site'
-WHERE EXISTS (SELECT 1 FROM directories)
-ON CONFLICT (id) DO NOTHING;
+-- Only before the "sites carry the location" migration below
+-- (directories.location still there), so the file stays re-runnable.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'directories' AND column_name = 'location'
+    ) THEN
+        INSERT INTO sites (id, name)
+        SELECT 'defaultsite', 'Default site'
+        WHERE EXISTS (SELECT 1 FROM directories)
+        ON CONFLICT (id) DO NOTHING;
 
-ALTER TABLE directories ADD COLUMN IF NOT EXISTS site_id VARCHAR(32) REFERENCES sites(id);
-UPDATE directories SET site_id = 'defaultsite' WHERE site_id IS NULL;
-ALTER TABLE directories ALTER COLUMN site_id SET NOT NULL;
-CREATE INDEX IF NOT EXISTS ix_directories_site_id ON directories (site_id);
+        ALTER TABLE directories ADD COLUMN IF NOT EXISTS site_id VARCHAR(32) REFERENCES sites(id);
+        UPDATE directories SET site_id = 'defaultsite' WHERE site_id IS NULL;
+        ALTER TABLE directories ALTER COLUMN site_id SET NOT NULL;
+        CREATE INDEX IF NOT EXISTS ix_directories_site_id ON directories (site_id);
+    END IF;
+END $$;
 
 ALTER TABLE directories ADD COLUMN IF NOT EXISTS parent_directory_id VARCHAR(32) REFERENCES directories(id);
 CREATE INDEX IF NOT EXISTS ix_directories_parent_directory_id ON directories (parent_directory_id);
@@ -393,3 +403,62 @@ CREATE TABLE IF NOT EXISTS login_codes (
 );
 
 CREATE INDEX IF NOT EXISTS ix_login_codes_user_id ON login_codes (user_id);
+
+----------------------------------------------------------------------------
+-- Sites carry the location; a directory has one PRINCIPAL site and any
+-- number of ANNEX sites; a site belongs to exactly one directory.
+-- Existing directory positions are copied onto the sites. Re-runnable.
+
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS directory_id VARCHAR(32) REFERENCES directories(id);
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326);
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS kind VARCHAR(16);
+
+DO $$
+DECLARE
+    d RECORD;
+    new_site_id VARCHAR(32);
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'directories' AND column_name = 'location'
+    ) THEN
+        FOR d IN SELECT id, site_id, location FROM directories ORDER BY created_at, id LOOP
+            IF EXISTS (SELECT 1 FROM sites WHERE id = d.site_id AND directory_id IS NULL) THEN
+                -- First directory on this site: the site becomes its principal site.
+                UPDATE sites
+                SET directory_id = d.id, location = d.location, kind = 'PRINCIPAL'
+                WHERE id = d.site_id;
+            ELSE
+                -- Site already taken by another directory (e.g. the shared
+                -- 'defaultsite'): give this directory its own copy.
+                new_site_id := 's' || substr(md5(d.id || d.site_id), 1, 30);
+                INSERT INTO sites (id, directory_id, name, address, location, kind, active)
+                SELECT new_site_id, d.id, s.name, s.address, d.location, 'PRINCIPAL', TRUE
+                FROM sites s WHERE s.id = d.site_id
+                ON CONFLICT (id) DO NOTHING;
+
+                UPDATE employee_assignments SET site_id = new_site_id WHERE directory_id = d.id;
+            END IF;
+        END LOOP;
+
+        -- Sites no directory claimed and nobody works on.
+        DELETE FROM sites s
+        WHERE s.directory_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM employee_assignments ea WHERE ea.site_id = s.id);
+
+        DROP INDEX IF EXISTS ix_directories_site_id;
+        ALTER TABLE directories DROP COLUMN site_id;
+        ALTER TABLE directories DROP COLUMN location;
+    END IF;
+END $$;
+
+ALTER TABLE sites ALTER COLUMN directory_id SET NOT NULL;
+ALTER TABLE sites ALTER COLUMN location SET NOT NULL;
+UPDATE sites SET kind = 'ANNEX' WHERE kind IS NULL;
+ALTER TABLE sites ALTER COLUMN kind SET NOT NULL;
+ALTER TABLE sites ALTER COLUMN kind SET DEFAULT 'ANNEX';
+
+CREATE INDEX IF NOT EXISTS ix_sites_directory_id ON sites (directory_id);
+-- At most one principal site per directory (MakeSitePrincipal saves the demotion first).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_sites_one_principal_per_directory
+    ON sites (directory_id) WHERE kind = 'PRINCIPAL';

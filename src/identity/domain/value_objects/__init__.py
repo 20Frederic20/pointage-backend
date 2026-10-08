@@ -1,5 +1,6 @@
 from .ids import DirectoryId, EmployeeAssignmentId, EmployeeId, SiteId, UserId
 from .role import Role
+from .site_kind import SiteKind
 
 __all__ = [
     "DirectoryId",
@@ -7,5 +8,6 @@ __all__ = [
     "EmployeeId",
     "Role",
     "SiteId",
+    "SiteKind",
     "UserId",
 ]

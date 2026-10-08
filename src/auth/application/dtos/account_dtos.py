@@ -11,9 +11,13 @@ from core.application import DTO
 
 @dataclass(frozen=True)
 class AccountCredentialsDTO(DTO):
-    """``password_hash`` is ``None`` for an account that logs in by code."""
+    """``password_hash`` is ``None`` for an account that logs in by code.
+
+    ``email`` is where login codes go, whatever identifier the caller typed.
+    """
 
     id: str
+    email: str
     role: str
     is_active: bool
     password_hash: str | None

@@ -34,15 +34,15 @@ class LoginHandler(CommandHandler[LoginCommand, TokenPairDTO]):
         self._tokens = token_issuer
 
     async def _execute(self, request: LoginCommand) -> tuple[TokenPairDTO, Sequence[AggregateRoot]]:
-        account = await self._accounts.find_credentials(request.email)
-        # Exactly one verify on every path — unknown email and code-only
+        account = await self._accounts.find_credentials(request.identifier)
+        # Exactly one verify on every path — unknown identifier and code-only
         # account included — so the response time does not reveal which
         # accounts exist or which ones have a password.
         has_password = account is not None and account.password_hash is not None
         hashed = account.password_hash if has_password else self._passwords.dummy_hash
         password_ok = self._passwords.verify(request.password, hashed)
         if not has_password or not password_ok or not account.is_active:
-            raise InvalidCredentialsError("Invalid email or password")
+            raise InvalidCredentialsError("Invalid identifier or password")
 
         raw_refresh_token = self._tokens.new_refresh_token()
         refresh_token = RefreshToken.start_session(

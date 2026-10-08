@@ -1,21 +1,20 @@
-"""The Workspace aggregate — the top-level tenant all data is scoped by."""
+"""The Directory aggregate — an entity / department employees are assigned to."""
 
 from typing import Self
 
 from core.domain.entity import AggregateRoot
 
 from ..events import DirectoryCreated
-from ..value_objects.ids import DirectoryId, SiteId
-from ..value_objects.location import Location
+from ..value_objects.ids import DirectoryId
 
 
 class Directory(AggregateRoot[DirectoryId]):
-    """One tenant (an agency or company account); every row in the system
-    carries its ``directory_id`` (PRD §6.1, §10). Holds the subscription
-    code and the seat limit that caps how many members can be invited.
+    """A directory groups employees. Its places are its sites (one principal,
+    any number of annexes): each site carries its own GPS position, the
+    directory has none.
     """
 
-    __slots__ = ("_code", "_location", "_name", "_parent_directory_id", "_site_id")
+    __slots__ = ("_code", "_name", "_parent_directory_id")
 
     def __init__(
         self,
@@ -23,8 +22,6 @@ class Directory(AggregateRoot[DirectoryId]):
         *,
         name: str,
         code: str,
-        location: Location,
-        site_id: SiteId,
         parent_directory_id: DirectoryId | None = None,
         created_at=None,
         updated_at=None,
@@ -36,8 +33,6 @@ class Directory(AggregateRoot[DirectoryId]):
         )
         self._name = name.strip()
         self._code = code
-        self._location = location
-        self._site_id = site_id
         self._parent_directory_id = parent_directory_id
 
     @classmethod
@@ -47,8 +42,6 @@ class Directory(AggregateRoot[DirectoryId]):
         *,
         code: str,
         name: str,
-        location: Location,
-        site_id: SiteId,
         parent_directory_id: DirectoryId | None = None,
     ) -> Self:
         """
@@ -58,8 +51,6 @@ class Directory(AggregateRoot[DirectoryId]):
             directory_id,
             code=code,
             name=name,
-            location=location,
-            site_id=site_id,
             parent_directory_id=parent_directory_id,
         )
         directory.record_event(DirectoryCreated(directory_id))
@@ -70,15 +61,12 @@ class Directory(AggregateRoot[DirectoryId]):
         *,
         code: str | None,
         name: str | None,
-        location: Location | None
     ) -> None:
 
         if code is not None:
             self._code = code
         if name is not None:
             self._name = name
-        if location is not None:
-            self._location = location
 
     def rename(self, name: str) -> None:
         """Set the display name."""
@@ -92,14 +80,6 @@ class Directory(AggregateRoot[DirectoryId]):
     @property
     def code(self) -> str:
         return self._code
-
-    @property
-    def location(self) -> Location:
-        return self._location
-
-    @property
-    def site_id(self) -> SiteId:
-        return self._site_id
 
     @property
     def parent_directory_id(self) -> DirectoryId | None:

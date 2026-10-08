@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from core.domain.events import BaseEvent, IEventBus
 from identity.application import (
+    GetEmployeeByEmployeeNumberQuery,
     GetUserByEmailQuery,
     GetUserByIdQuery,
     PasswordHasher,
@@ -46,16 +47,28 @@ class IdentityUserAccounts(UserAccounts):
             )
             return await users.send(request)
 
-    async def find_credentials(self, email: str) -> AccountCredentialsDTO | None:
+    async def find_credentials(self, identifier: str) -> AccountCredentialsDTO | None:
+        """An identifier with ``@`` is an email; anything else is an employee number."""
+        email = identifier if "@" in identifier else await self._email_of_employee(identifier)
+        if email is None:
+            return None
         dto = await self._send(GetUserByEmailQuery(email=email))
         if dto is None:
             return None
         return AccountCredentialsDTO(
             id=dto.id,
+            email=dto.email,
             role=str(dto.role),
             is_active=dto.is_active,
             password_hash=dto.password_hash,
         )
+
+    async def _email_of_employee(self, employee_number: str) -> str | None:
+        employee = await self._send(GetEmployeeByEmployeeNumberQuery(employee_number=employee_number))
+        if employee is None:
+            return None
+        user = await self._send(GetUserByIdQuery(user_id=employee.user_id))
+        return user.email if user is not None else None
 
     async def get_account(self, user_id: str) -> AccountDTO | None:
         dto = await self._send(GetUserByIdQuery(user_id=user_id))

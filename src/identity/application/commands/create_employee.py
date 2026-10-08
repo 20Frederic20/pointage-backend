@@ -18,3 +18,5 @@ class CreateEmployeeCommand(Command):
     is_active: bool | None = None
     # First day of the initial assignment; today when omitted.
     assignment_start_date: date | None = None
+    # Site of the initial assignment; the directory's principal site when omitted.
+    site_id: str | None = None

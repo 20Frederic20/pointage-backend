@@ -18,11 +18,12 @@ class DistanceCalculator:
         Return the distance between two GPS coordinates in meters.
         """
 
-        latitude_1 = radians(latitude_1)
-        latitude_2 = radians(latitude_2)
-
+        # Deltas from the degrees, before converting the latitudes (converting
+        # twice made the north-south gap almost vanish).
         delta_latitude = radians(latitude_2 - latitude_1)
         delta_longitude = radians(longitude_2 - longitude_1)
+        latitude_1 = radians(latitude_1)
+        latitude_2 = radians(latitude_2)
 
         a = (
             sin(delta_latitude / 2) ** 2

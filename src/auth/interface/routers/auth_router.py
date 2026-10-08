@@ -36,11 +36,11 @@ async def login(
     payload: LoginRequest,
     auth: AuthContainer = Depends(get_auth),  # noqa: B008
 ) -> TokenPairResponse:
-    """Email + password → access token (15 min) + refresh token.
+    """Email or employee number + password → access token (15 min) + refresh token.
 
     Only for accounts that have a password; the others log in by code.
     """
-    dto = await auth.send(LoginCommand(email=payload.email, password=payload.password))
+    dto = await auth.send(LoginCommand(identifier=payload.identifier, password=payload.password))
     return _to_response(dto)
 
 
@@ -53,11 +53,12 @@ async def request_login_code(
 ) -> None:
     """Email a 6-digit login code (valid 10 min) to a password-less account.
 
-    Always 202, whatever the email, so the answer never tells whether the
+    ``identifier`` is an email or an employee number; the code goes to the
+    account's email. Always 202, whatever the identifier, so the answer never tells whether the
     account exists. The email leaves after the response: the SMTP round
     trip never shows in the response time.
     """
-    email = await auth.send(RequestLoginCodeCommand(email=payload.email))
+    email = await auth.send(RequestLoginCodeCommand(identifier=payload.identifier))
     if email is not None:
         background_tasks.add_task(email_sender.send, email)
 
@@ -67,8 +68,8 @@ async def verify_login_code(
     payload: VerifyLoginCodeRequest,
     auth: AuthContainer = Depends(get_auth),  # noqa: B008
 ) -> TokenPairResponse:
-    """Email + emailed code → the same token pair as a password login."""
-    dto = await auth.send(VerifyLoginCodeCommand(email=payload.email, code=payload.code))
+    """Email or employee number + emailed code → the same token pair as a password login."""
+    dto = await auth.send(VerifyLoginCodeCommand(identifier=payload.identifier, code=payload.code))
     if dto is None:
         # The handler already committed the failed attempt (see VerifyLoginCodeHandler).
         raise InvalidLoginCodeError("Invalid login code")

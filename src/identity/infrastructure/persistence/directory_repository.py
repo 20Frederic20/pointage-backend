@@ -7,11 +7,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.domain.errors import ConflictError, NotFoundError
-from identity.domain.value_objects.location import Location
 
 from ...domain.entities import Directory
 from ...domain.repositories import IDirectoryRepository
-from ...domain.value_objects.ids import DirectoryId, SiteId
+from ...domain.value_objects.ids import DirectoryId
 from .models import DirectoryModel
 
 
@@ -76,8 +75,6 @@ class DirectoryRepository(IDirectoryRepository):
                     id=directory.id.value,
                     name=directory.name,
                     code=directory.code,
-                    location=directory.location.to_wkt(),
-                    site_id=directory.site_id.value,
                     parent_directory_id=(
                         directory.parent_directory_id.value
                         if directory.parent_directory_id is not None
@@ -102,8 +99,6 @@ class DirectoryRepository(IDirectoryRepository):
             .values(
                 name=directory.name,
                 code=directory.code,
-                location=directory.location.to_wkt(),
-                site_id=directory.site_id.value,
                 parent_directory_id=(
                     directory.parent_directory_id.value
                     if directory.parent_directory_id is not None
@@ -121,16 +116,10 @@ class DirectoryRepository(IDirectoryRepository):
             )
 
     def _to_aggregate(self, row) -> Directory:
-
-
-        location_obj = Location.from_wkt(row.location) if row.location else None
-
         return Directory(
             DirectoryId(row.id),
             name=row.name,
             code=row.code,
-            location=location_obj,
-            site_id=SiteId(row.site_id),
             parent_directory_id=(
                 DirectoryId(row.parent_directory_id) if row.parent_directory_id else None
             ),

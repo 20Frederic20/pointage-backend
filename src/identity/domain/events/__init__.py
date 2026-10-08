@@ -2,7 +2,7 @@ from .employee_assignment_events import EmployeeAssigned, EmployeeAssignmentEnde
 from .employee_events import (
     EmployeeCreated,
 )
-from .site_events import SiteActivated, SiteCreated, SiteDeactivated
+from .site_events import SiteActivated, SiteCreated, SiteDeactivated, SiteMadePrincipal
 from .user_events import (
     DirectoryCreated,
     UserDeactivated,
@@ -18,6 +18,7 @@ __all__ = [
     "SiteActivated",
     "SiteCreated",
     "SiteDeactivated",
+    "SiteMadePrincipal",
     "UserDeactivated",
     "UserRegistered",
     "UserRoleChanged",

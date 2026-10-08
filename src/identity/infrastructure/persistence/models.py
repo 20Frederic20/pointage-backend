@@ -13,29 +13,31 @@ from core.infrastructure.database import BaseModel
 from ...domain.value_objects.role import Role
 
 
-class SiteModel(BaseModel):
-    __tablename__ = "sites"
-
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    address: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-
-
 class DirectoryModel(BaseModel):
     __tablename__ = "directories"
 
     code: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    parent_directory_id: Mapped[str | None] = mapped_column(
+        String(32), ForeignKey("directories.id"), nullable=True, index=True
+    )
+
+
+class SiteModel(BaseModel):
+    __tablename__ = "sites"
+
+    directory_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("directories.id"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    address: Mapped[str | None] = mapped_column(String(512), nullable=True)
     location: Mapped[Point] = mapped_column(
         Geography(geometry_type="POINT", srid=4326),
         nullable=False
     )
-    site_id: Mapped[str] = mapped_column(
-        String(32), ForeignKey("sites.id"), nullable=False, index=True
-    )
-    parent_directory_id: Mapped[str | None] = mapped_column(
-        String(32), ForeignKey("directories.id"), nullable=True, index=True
-    )
+    # PRINCIPAL / ANNEX — one PRINCIPAL per directory (partial unique index).
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class UserModel(BaseModel):

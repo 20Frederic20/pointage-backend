@@ -2,17 +2,19 @@ from dataclasses import dataclass
 
 from core.application import Command
 from identity.domain.value_objects.location import Location
-from punch.domain import EntrySource, EntryType, LocationConfidence
+from punch.domain import EntrySource
 
 
 @dataclass(frozen=True)
 class CreateTimeEntryCommand(Command):
-    """Create a new time entry."""
+    """Punch for the employee of the connected account.
 
-    employee_number: str
-    entry_type: EntryType
+    The direction (IN / OUT) and the location confidence are decided by the
+    handler, never by the client.
+    """
+
+    user_id: str
     location: Location
-    location_confidence: LocationConfidence
     source: EntrySource
     idempotency_key: str | None = None
     wifi_identifier: str | None = None

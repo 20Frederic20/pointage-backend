@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
 
+from auth.application.dtos import PrincipalDTO
+from auth.interface import get_current_principal
 from identity.domain.value_objects.location import Location
 from punch.application.commands import CreateTimeEntryCommand
-from punch.domain import EntryType, LocationConfidence
 from punch.infrastructure import PunchesContainer
 from punch.interface import TimeEntryResponse, CreateTimeEntryRequest, get_punches
 
@@ -20,19 +21,18 @@ def _to_response(dto) -> TimeEntryResponse:
 )
 async def create_time_entry(
     payload: CreateTimeEntryRequest,
+    principal: PrincipalDTO = Depends(get_current_principal),  # noqa: B008
     time_entries: PunchesContainer = Depends(get_punches)  # noqa: B008
 ):
-    """Create a new time entry."""
+    """Punch for the connected employee. The server decides IN or OUT."""
 
     dto = await time_entries.send(
         CreateTimeEntryCommand(
-            employee_number=payload.employee_number,
+            user_id=principal.user_id,
             location=Location(payload.longitude, payload.latitude),
             source=payload.source,
-            entry_type=EntryType(payload.entry_type),
             idempotency_key=payload.idempotency_key,
             wifi_identifier=payload.wifi_identifier,
-            location_confidence=LocationConfidence(payload.location_confidence)
         )
     )
 

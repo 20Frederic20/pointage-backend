@@ -19,6 +19,7 @@ from .notifications import (
     SiteActivatedNotification,
     SiteCreatedNotification,
     SiteDeactivatedNotification,
+    SiteMadePrincipalNotification,
     UserDeactivatedNotification,
     UserRegisteredNotification,
     UserRoleChangedNotification,
@@ -84,6 +85,11 @@ class SiteDeactivatedConsumer(EventHandler[SiteDeactivatedNotification]):
         _log(event)
 
 
+class SiteMadePrincipalConsumer(EventHandler[SiteMadePrincipalNotification]):
+    async def handle(self, event: SiteMadePrincipalNotification) -> None:
+        _log(event)
+
+
 class EmployeeAssignedConsumer(EventHandler[EmployeeAssignedNotification]):
     async def handle(self, event: EmployeeAssignedNotification) -> None:
         _log(event)
@@ -103,6 +109,7 @@ USERS_CONSUMERS: dict[type, type] = {
     SiteCreatedNotification: SiteCreatedConsumer,
     SiteActivatedNotification: SiteActivatedConsumer,
     SiteDeactivatedNotification: SiteDeactivatedConsumer,
+    SiteMadePrincipalNotification: SiteMadePrincipalConsumer,
     EmployeeAssignedNotification: EmployeeAssignedConsumer,
     EmployeeAssignmentEndedNotification: EmployeeAssignmentEndedConsumer,
 }

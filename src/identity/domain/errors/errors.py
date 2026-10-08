@@ -42,7 +42,7 @@ class DirectoryAlreadyExistsError(DomainError):
 
 
 class SiteInactiveError(DomainError):
-    """Raised when a directory or an assignment targets a deactivated site."""
+    """Raised when an assignment targets a deactivated site."""
 
     code = "SITE_INACTIVE"
     http_status = 409
@@ -68,5 +68,29 @@ class OverlappingEmployeeAssignmentError(DomainError):
 class EmployeeWithThisNumberAlreadyExistsError(DomainError):
 
     code = "EMPLOYEE_WITH_THIS_NUMBER_ALREADY_EXISTS"
+    http_status = 409
+    severity = Severity.WARNING
+
+
+class SiteNotInDirectoryError(DomainError):
+    """Raised when an assignment names a site of another directory."""
+
+    code = "SITE_NOT_IN_DIRECTORY"
+    http_status = 422
+    severity = Severity.WARNING
+
+
+class DirectoryHasNoSiteError(DomainError):
+    """Raised when assigning to a directory that has no site yet."""
+
+    code = "DIRECTORY_HAS_NO_SITE"
+    http_status = 409
+    severity = Severity.WARNING
+
+
+class PrincipalSiteCannotBeDeactivatedError(DomainError):
+    """Raised when deactivating a principal site: make another site principal first."""
+
+    code = "PRINCIPAL_SITE_CANNOT_BE_DEACTIVATED"
     http_status = 409
     severity = Severity.WARNING

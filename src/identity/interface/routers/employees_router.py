@@ -35,6 +35,7 @@ async def create(
             phone=payload.phone,
             role=payload.role,
             assignment_start_date=payload.assignment_start_date,
+            site_id=payload.site_id,
         )
     )
 

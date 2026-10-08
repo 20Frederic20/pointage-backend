@@ -11,11 +11,12 @@ from ..value_objects.ids import DirectoryId, EmployeeAssignmentId, EmployeeId, S
 
 
 class EmployeeAssignment(AggregateRoot[EmployeeAssignmentId]):
-    """An employee belongs to a directory (and its site) from ``start_date``
-    to ``end_date`` (inclusive; open-ended when ``end_date`` is ``None``).
+    """An employee belongs to a directory from ``start_date`` to ``end_date``
+    (inclusive; open-ended when ``end_date`` is ``None``).
 
-    ``site_id`` is the directory's site at assignment time, so the history
-    stays right if the directory later moves to another site.
+    ``site_id`` is the precise site of that directory where the employee
+    works — principal or annex — and the one their punches are checked
+    against.
     """
 
     __slots__ = ("_directory_id", "_employee_id", "_end_date", "_site_id", "_start_date")

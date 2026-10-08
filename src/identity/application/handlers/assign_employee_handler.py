@@ -1,4 +1,4 @@
-"""Assign an employee to a directory and its site."""
+"""Assign an employee to one site of a directory."""
 
 from collections.abc import Sequence
 
@@ -8,7 +8,7 @@ from core.domain.entity import AggregateRoot
 from core.domain.errors import NotFoundError
 
 from ...domain.entities import EmployeeAssignment
-from ...domain.errors import OverlappingEmployeeAssignmentError, SiteInactiveError
+from ...domain.errors import OverlappingEmployeeAssignmentError
 from ...domain.repositories import (
     IDirectoryRepository,
     IEmployeeAssignmentRepository,
@@ -17,6 +17,7 @@ from ...domain.repositories import (
 )
 from ...domain.value_objects.ids import DirectoryId, EmployeeAssignmentId, EmployeeId
 from ..commands import AssignEmployeeCommand
+from ..services import AssignmentSiteService
 from ..dtos import EmployeeAssignmentDTO
 
 
@@ -35,7 +36,7 @@ class AssignEmployeeHandler(CommandHandler[AssignEmployeeCommand, EmployeeAssign
         self._assignments = employee_assignment_repository
         self._employees = employee_repository
         self._directories = directory_repository
-        self._sites = site_repository
+        self._assignment_sites = AssignmentSiteService(site_repository=site_repository)
 
     async def _execute(
         self, request: AssignEmployeeCommand
@@ -44,9 +45,7 @@ class AssignEmployeeHandler(CommandHandler[AssignEmployeeCommand, EmployeeAssign
         if not await self._employees.exists(employee_id):
             raise NotFoundError(f"Employee {employee_id.value} not found", context=employee_id.value)
         directory = await self._directories.get_by_id(DirectoryId(request.directory_id))
-        site = await self._sites.get_by_id(directory.site_id)
-        if not site.active:
-            raise SiteInactiveError(f"Site {site.name!r} is not active", context=site.id.value)
+        site = await self._assignment_sites.resolve(directory, request.site_id)
         if await self._assignments.exists_overlapping(employee_id, request.start_date, request.end_date):
             raise OverlappingEmployeeAssignmentError(
                 f"Employee {employee_id.value} already has an assignment in this date range",
@@ -57,7 +56,7 @@ class AssignEmployeeHandler(CommandHandler[AssignEmployeeCommand, EmployeeAssign
             EmployeeAssignmentId.generate(),
             employee_id=employee_id,
             directory_id=directory.id,
-            site_id=directory.site_id,
+            site_id=site.id,
             start_date=request.start_date,
             end_date=request.end_date,
         )

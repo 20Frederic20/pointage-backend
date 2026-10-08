@@ -7,7 +7,7 @@ from core.application import CommandHandler, IUnitOfWork
 from core.application.outbox import IEventOutbox
 from core.domain.entity import AggregateRoot
 from identity.domain import DirectoryId, EmployeeAssignmentId, EmployeeId, Role, UserId
-from identity.domain.errors.errors import EmployeeWithThisNumberAlreadyExistsError, SiteInactiveError
+from identity.domain.errors.errors import EmployeeWithThisNumberAlreadyExistsError
 
 from ...domain.entities import Employee, EmployeeAssignment
 from ...domain.repositories import (
@@ -17,6 +17,7 @@ from ...domain.repositories import (
     ISiteRepository,
 )
 from ..commands import CreateEmployeeCommand
+from ..services import AssignmentSiteService
 from ..dtos import EmployeeDTO
 
 
@@ -37,7 +38,7 @@ class CreateEmployeeHandler(
         self._employees = employee_repository
         self._assignments = employee_assignment_repository
         self._directories = directory_repository
-        self._sites = site_repository
+        self._assignment_sites = AssignmentSiteService(site_repository=site_repository)
 
     async def _execute(
         self, request: CreateEmployeeCommand
@@ -48,9 +49,7 @@ class CreateEmployeeHandler(
                 context=request.employee_number,
             )
         directory = await self._directories.get_by_id(DirectoryId(request.directory_id))
-        site = await self._sites.get_by_id(directory.site_id)
-        if not site.active:
-            raise SiteInactiveError(f"Site {site.name!r} is not active", context=site.id.value)
+        site = await self._assignment_sites.resolve(directory, request.site_id)
 
         employee = Employee.create(
             employee_id=EmployeeId.generate(),
@@ -64,7 +63,7 @@ class CreateEmployeeHandler(
             EmployeeAssignmentId.generate(),
             employee_id=employee.id,
             directory_id=directory.id,
-            site_id=directory.site_id,
+            site_id=site.id,
             start_date=request.assignment_start_date or datetime.now(UTC).date(),
         )
         return EmployeeDTO.from_aggregate(employee), [employee, assignment]

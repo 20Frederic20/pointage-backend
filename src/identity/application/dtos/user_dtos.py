@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from core.application import DTO
-from identity.domain.value_objects.location import Location
 
 from ...domain.entities import Directory, User
 from ...domain.value_objects import Role
@@ -76,8 +75,6 @@ class DirectoryDTO(DTO):
     id: str
     name: str
     code: str
-    location: Location
-    site_id: str
     parent_directory_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -88,8 +85,6 @@ class DirectoryDTO(DTO):
             id=directory.id.value,
             name=directory.name,
             code=directory.code,
-            location=directory.location,
-            site_id=directory.site_id.value,
             parent_directory_id=(
                 directory.parent_directory_id.value
                 if directory.parent_directory_id is not None

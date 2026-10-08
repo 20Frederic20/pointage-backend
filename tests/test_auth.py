@@ -91,17 +91,22 @@ class FakePasswordHasher(PasswordHasher):
 class FakeUserAccounts(UserAccounts):
     def __init__(self):
         self.accounts = {}  # email -> AccountCredentialsDTO
+        self.employee_numbers = {}  # employee number -> email
 
-    def add(self, email, password, *, role="EMPLOYEE", is_active=True, user_id="usr1"):
+    def add(self, email, password, *, role="EMPLOYEE", is_active=True, user_id="usr1", employee_number=None):
         """``password=None``: a code-only account."""
         self.accounts[email] = AccountCredentialsDTO(
             id=user_id,
+            email=email,
             role=role,
             is_active=is_active,
             password_hash=f"hashed:{password}" if password is not None else None,
         )
+        if employee_number is not None:
+            self.employee_numbers[employee_number] = email
 
-    async def find_credentials(self, email):
+    async def find_credentials(self, identifier):
+        email = identifier if "@" in identifier else self.employee_numbers.get(identifier)
         return self.accounts.get(email)
 
     async def get_account(self, user_id):
@@ -170,9 +175,9 @@ def make_issuer(**overrides):
 @pytest.fixture
 def env():
     accounts = FakeUserAccounts()
-    accounts.add("ana@pointage.test", "correct-password")
+    accounts.add("ana@pointage.test", "correct-password", employee_number="EMP-001")
     tokens = make_issuer()
-    accounts.add("kofi@pointage.bj", None, user_id="usr3")  # code-only account
+    accounts.add("kofi@pointage.bj", None, user_id="usr3", employee_number="EMP-003")  # code-only account
     repo = FakeRefreshTokenRepository()
     codes = FakeLoginCodeRepository()
     hasher = FakePasswordHasher()
@@ -183,19 +188,19 @@ def env():
         repo=repo,
         codes=codes,
         hasher=hasher,
-        request_code=lambda email: run(
+        request_code=lambda identifier: run(
             RequestLoginCodeHandler(
                 unit_of_work=NoopUnitOfWork(), login_code_repository=codes, user_accounts=accounts, token_issuer=tokens
-            ).handle(RequestLoginCodeCommand(email=email))
+            ).handle(RequestLoginCodeCommand(identifier=identifier))
         ),
-        verify_code=lambda email, code: run(
+        verify_code=lambda identifier, code: run(
             VerifyLoginCodeHandler(**common, login_code_repository=codes, user_accounts=accounts, token_issuer=tokens).handle(
-                VerifyLoginCodeCommand(email=email, code=code)
+                VerifyLoginCodeCommand(identifier=identifier, code=code)
             )
         ),
-        login=lambda email, pw: run(
+        login=lambda identifier, pw: run(
             LoginHandler(**common, user_accounts=accounts, password_hasher=hasher, token_issuer=tokens).handle(
-                LoginCommand(email=email, password=pw)
+                LoginCommand(identifier=identifier, password=pw)
             )
         ),
         refresh=lambda raw: run(
@@ -216,6 +221,13 @@ def test_login_issues_an_access_token_for_the_account(env):
     pair = env.login("ana@pointage.test", "correct-password")
     principal = env.tokens.decode_access_token(pair.access_token)
     assert (principal.user_id, principal.role) == ("usr1", "EMPLOYEE")
+
+
+def test_login_by_employee_number_opens_the_same_account(env):
+    pair = env.login("EMP-001", "correct-password")
+    assert env.tokens.decode_access_token(pair.access_token).user_id == "usr1"
+    with pytest.raises(InvalidCredentialsError):
+        env.login("EMP-999", "correct-password")  # unknown number: same refusal
 
 
 def test_unknown_email_and_wrong_password_fail_the_same_way(env):
@@ -341,6 +353,14 @@ def test_right_code_logs_in_once(env):
     pair = env.verify_code("kofi@pointage.bj", code)
     assert env.tokens.decode_access_token(pair.access_token).user_id == "usr3"
     assert env.verify_code("kofi@pointage.bj", code) is None  # single use
+
+
+def test_code_requested_by_employee_number_goes_to_the_account_email(env):
+    email = env.request_code("EMP-003")
+    assert email.to == "kofi@pointage.bj"
+    pair = env.verify_code("EMP-003", code_in(email))
+    assert env.tokens.decode_access_token(pair.access_token).user_id == "usr3"
+    assert env.request_code("EMP-999") is None  # unknown number: same 202
 
 
 def test_wrong_codes_are_counted_and_the_fifth_kills_the_code(env):

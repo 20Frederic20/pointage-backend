@@ -7,6 +7,6 @@ from ..dtos import EmployeeDTO
 
 @dataclass(frozen=True)
 class GetEmployeeByEmployeeNumberQuery(Query):
-    employee_numberr: str
+    employee_number: str
 
     Result = EmployeeDTO | None

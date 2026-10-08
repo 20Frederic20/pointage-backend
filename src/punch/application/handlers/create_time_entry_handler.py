@@ -4,15 +4,20 @@ from datetime import UTC, datetime
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.domain.entity import AggregateRoot
 from core.domain.errors import NotFoundError
-from identity.domain.entities import Employee, Directory
-from identity.domain.repositories import IDirectoryRepository, IEmployeeAssignmentRepository, IEmployeeRepository
+from identity.domain import UserId
+from identity.domain.entities import Employee, Site
+from identity.domain.errors import SiteInactiveError
+from identity.domain.repositories import IEmployeeAssignmentRepository, IEmployeeRepository, ISiteRepository
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
 from punch.domain import TimeEntryId, LocationConfidence
 from punch.domain.entities import TimeEntry
-from punch.domain.errors import EmployeeHasAlreadyPunchedThisTypeOfEntryError, EmployeeNotAssignedError
+from punch.domain.errors import EmployeeNotAssignedError, TooFarFromWorkplaceError
 from punch.domain.repositories import ITimeEntryRepository
 from punch.domain.services.distance_calculator import DistanceCalculator
+from punch.domain.services.entry_type_resolver import EntryTypeResolver
+
+MAX_DISTANCE_METERS = 100
 
 
 class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO]):
@@ -24,44 +29,47 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         unit_of_work: IUnitOfWork,
         time_entry_repository: ITimeEntryRepository,
         employee_repository: IEmployeeRepository,
-        directory_repository: IDirectoryRepository,
+        site_repository: ISiteRepository,
         employee_assignment_repository: IEmployeeAssignmentRepository,
         event_outbox: IEventOutbox | None = None,
     ) -> None:
         super().__init__(unit_of_work=unit_of_work, event_outbox=event_outbox)
         self.time_entry_repository = time_entry_repository
         self.employee_repository = employee_repository
-        self.directory_repository = directory_repository
+        self.site_repository = site_repository
         self.employee_assignment_repository = employee_assignment_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
-        employee: Employee | None = await self.employee_repository.find_by_employee_number(request.employee_number)
+        employee: Employee | None = await self.employee_repository.find_by_user_id(UserId(request.user_id))
         if not employee:
-            raise NotFoundError(f"Employee with number {request.employee_number} not found")
+            raise NotFoundError("No employee record for this account", context=request.user_id)
 
-        # The reference location is the directory of the assignment covering today.
+        # The reference location is the site (principal or annex) of the assignment covering today.
         assignment = await self.employee_assignment_repository.find_active(employee.id, datetime.now(UTC).date())
         if assignment is None:
             raise EmployeeNotAssignedError(
-                f"Employee {request.employee_number} has no active assignment today",
+                f"Employee {employee.employee_number} has no active assignment today",
                 context=employee.id.value,
             )
-        directory: Directory = await self.directory_repository.get_by_id(assignment.directory_id)
+        site: Site = await self.site_repository.get_by_id(assignment.site_id)
+        if not site.active:
+            raise SiteInactiveError(f"Site {site.name} is deactivated", context=site.id.value)
 
         distance = DistanceCalculator.calculate(
             latitude_1=request.location.latitude,
             longitude_1=request.location.longitude,
-            latitude_2=directory.location.latitude,
-            longitude_2=directory.location.longitude,
+            latitude_2=site.location.latitude,
+            longitude_2=site.location.longitude,
         )
 
-        if distance > 100:
-            raise ValueError(f"Employee {employee.id} is too far from the directory location: {distance} meters")
+        if distance > MAX_DISTANCE_METERS:
+            raise TooFarFromWorkplaceError(
+                f"Employee {employee.id} is {distance:.0f} m from site {site.name} (max {MAX_DISTANCE_METERS} m)",
+                context=employee.id.value,
+            )
 
         last_entry: TimeEntry | None = await self.time_entry_repository.find_last_by_employee_id(employee.id)
-        if last_entry and last_entry.entry_type == request.entry_type:
-            raise EmployeeHasAlreadyPunchedThisTypeOfEntryError(f"Employee {employee.id} already has a time entry of type {request.entry_type}")
-
+        entry_type = EntryTypeResolver.resolve(last_entry, datetime.now(UTC))
 
         location_confidence = (
             LocationConfidence("HIGH")
@@ -71,7 +79,7 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         time_entry = TimeEntry.create(
             time_entry_id=TimeEntryId.generate(),
             employee_id=employee.id,
-            entry_type=request.entry_type,
+            entry_type=entry_type,
             location=request.location,
             location_confidence=LocationConfidence(location_confidence),
             source=request.source,

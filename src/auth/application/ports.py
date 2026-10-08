@@ -73,7 +73,8 @@ class UserAccounts(ABC):
     """The identity accounts, seen from auth."""
 
     @abstractmethod
-    async def find_credentials(self, email: str) -> AccountCredentialsDTO | None:
+    async def find_credentials(self, identifier: str) -> AccountCredentialsDTO | None:
+        """The account behind an email or an employee number, or ``None``."""
         ...
 
     @abstractmethod

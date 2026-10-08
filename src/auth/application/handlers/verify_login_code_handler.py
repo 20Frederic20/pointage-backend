@@ -40,7 +40,7 @@ class VerifyLoginCodeHandler(CommandHandler[VerifyLoginCodeCommand, TokenPairDTO
     async def _execute(
         self, request: VerifyLoginCodeCommand
     ) -> tuple[TokenPairDTO | None, Sequence[AggregateRoot]]:
-        account = await self._accounts.find_credentials(request.email)
+        account = await self._accounts.find_credentials(request.identifier)
         if account is None or not account.is_active or account.password_hash is not None:
             raise InvalidLoginCodeError("Invalid login code")
         login_code = await self._login_codes.find_latest_for_user(account.id)

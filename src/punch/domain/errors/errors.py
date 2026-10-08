@@ -33,9 +33,9 @@ class EmployeeNotAssignedError(DomainError):
     severity = Severity.WARNING
 
 
-class EmployeeHasAlreadyPunchedThisTypeOfEntryError(DomainError):
-    """Raised when an employee has already punched this type of entry."""
+class TooFarFromWorkplaceError(DomainError):
+    """Raised when an employee punches too far from the directory of their assignment."""
 
-    code = "EMPLOYEE_ALREADY_PUNCHED_ENTRY_TYPE"
-    http_status = 409
+    code = "TOO_FAR_FROM_WORKPLACE"
+    http_status = 422
     severity = Severity.WARNING

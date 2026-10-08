@@ -10,15 +10,13 @@ class _CamelSchema(BaseModel):
 
 
 class CreateTimeEntryRequest(_CamelSchema):
+    """The employee comes from the access token; IN / OUT is decided by the server."""
 
-    employee_number: str
     longitude: float
     latitude: float
-    entry_type: str
     source: EntrySource
     idempotency_key: str
     wifi_identifier: str | None = None
-    location_confidence: LocationConfidence | None = None
 
 
 class TimeEntryResponse(_CamelSchema):

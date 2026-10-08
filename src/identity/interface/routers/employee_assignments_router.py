@@ -34,6 +34,7 @@ async def assign(
         AssignEmployeeCommand(
             employee_id=payload.employee_id,
             directory_id=payload.directory_id,
+            site_id=payload.site_id,
             start_date=payload.start_date,
             end_date=payload.end_date,
         )

@@ -5,7 +5,7 @@ from core.application import Command
 
 @dataclass(frozen=True)
 class LoginCommand(Command):
-    """Exchange email + password for a token pair."""
+    """Exchange identifier (email or employee number) + password for a token pair."""
 
-    email: str
+    identifier: str
     password: str

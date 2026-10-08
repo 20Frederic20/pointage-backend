@@ -1,24 +1,30 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 
 class _CamelSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+# An email or an employee number: the account is resolved by identity.
+Identifier = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=254)]
+
+
 # ---- requests --------------------------------------------------------------
 
 
 class LoginRequest(_CamelSchema):
-    email: EmailStr
+    identifier: Identifier
     password: str = Field(min_length=1)
 
 
 class LoginCodeRequest(_CamelSchema):
-    email: EmailStr
+    identifier: Identifier
 
 
 class VerifyLoginCodeRequest(_CamelSchema):
-    email: EmailStr
+    identifier: Identifier
     code: str = Field(pattern=r"^\d{6}$")
 
 

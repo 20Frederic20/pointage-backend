@@ -43,6 +43,8 @@ class CreateEmployeeRequest(_CamelSchema):
     phone: str | None = Field(default=None, min_length=10)
     # First day of the initial assignment to ``directory_id``; today when omitted.
     assignment_start_date: date | None = None
+    # Site of the initial assignment; the directory's principal site when omitted.
+    site_id: str | None = None
 
 
 class AcceptInviteRequest(_CamelSchema):
@@ -75,20 +77,22 @@ class UpdateEmployeeRequest(_CamelSchema):
 class CreateDirectoryRequest(_CamelSchema):
     code: str
     name: str
-    longitude: float
-    latitude: float
-    site_id: str
     parent_directory_id: str | None = None
 
 
 class CreateSiteRequest(_CamelSchema):
+    directory_id: str
     name: str = Field(min_length=1, max_length=255)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
     address: str | None = Field(default=None, max_length=512)
 
 
 class AssignEmployeeRequest(_CamelSchema):
     employee_id: str
     directory_id: str
+    # Precise punching site; the directory's principal site when omitted.
+    site_id: str | None = None
     start_date: date
     end_date: date | None = None
 
@@ -152,8 +156,6 @@ class DirectoryResponse(_CamelSchema):
     id: str
     name: str
     code: str
-    location: Location
-    site_id: str = Field(alias="siteId")
     parent_directory_id: str | None = Field(default=None, alias="parentDirectoryId")
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
@@ -161,7 +163,10 @@ class DirectoryResponse(_CamelSchema):
 
 class SiteResponse(_CamelSchema):
     id: str
+    directory_id: str = Field(alias="directoryId")
     name: str
+    location: Location
+    kind: str
     active: bool
     address: str | None = None
     created_at: datetime | None = Field(default=None, alias="createdAt")

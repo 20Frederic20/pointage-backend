@@ -18,7 +18,7 @@ class DirectoryId(EntityId[Literal["directory"]]):
 
 
 class SiteId(EntityId[Literal["site"]]):
-    """Identity of a site (a physical place directories belong to)."""
+    """Identity of a site (a physical place of one directory)."""
 
 
 class EmployeeAssignmentId(EntityId[Literal["employee_assignment"]]):

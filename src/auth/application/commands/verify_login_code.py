@@ -5,7 +5,7 @@ from core.application import Command
 
 @dataclass(frozen=True)
 class VerifyLoginCodeCommand(Command):
-    """Exchange email + emailed code for a token pair."""
+    """Exchange identifier (email or employee number) + emailed code for a token pair."""
 
-    email: str
+    identifier: str
     code: str

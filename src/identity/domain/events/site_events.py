@@ -43,3 +43,17 @@ class SiteDeactivated(BaseEvent[SiteId]):
 
     def get_event_name(self) -> str:
         return "users.site.deactivated"
+
+
+class SiteMadePrincipal(BaseEvent[SiteId]):
+    """A site became the principal site of its directory."""
+
+    def __init__(self, site_id: SiteId) -> None:
+        super().__init__()
+        self._site_id = site_id
+
+    def get_aggregate_id(self) -> SiteId:
+        return self._site_id
+
+    def get_event_name(self) -> str:
+        return "users.site.made_principal"

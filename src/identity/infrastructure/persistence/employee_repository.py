@@ -43,6 +43,16 @@ class EmployeeRepository(IEmployeeRepository):
         )
         return self._to_aggregate(row) if row is not None else None
 
+    async def find_by_user_id(self, user_id: UserId) -> Employee | None:
+        # employees.user_id is not unique in table.sql: prefer the active, most recent record.
+        row = await self._session.scalar(
+            select(EmployeeModel)
+            .where(EmployeeModel.user_id == user_id.value)
+            .order_by(EmployeeModel.is_active.desc(), EmployeeModel.created_at.desc())
+            .limit(1)
+        )
+        return self._to_aggregate(row) if row is not None else None
+
     async def find(
         self, spec: Specification[Employee], *, limit: int = 50, offset: int = 0
     ) -> list[Employee]:

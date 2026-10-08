@@ -43,7 +43,7 @@ class RequestLoginCodeHandler(CommandHandler[RequestLoginCodeCommand, OutgoingEm
     async def _execute(
         self, request: RequestLoginCodeCommand
     ) -> tuple[OutgoingEmailDTO | None, Sequence[AggregateRoot]]:
-        account = await self._accounts.find_credentials(request.email)
+        account = await self._accounts.find_credentials(request.identifier)
         if account is None or not account.is_active or account.password_hash is not None:
             return None, []
 
@@ -63,7 +63,7 @@ class RequestLoginCodeHandler(CommandHandler[RequestLoginCodeCommand, OutgoingEm
         )
         minutes = int(LoginCode.TTL.total_seconds() // 60)
         email = OutgoingEmailDTO(
-            to=request.email,
+            to=account.email,
             # Code kept out of the subject: it would show on locked screens.
             subject="Your Pointage login code",
             body=(

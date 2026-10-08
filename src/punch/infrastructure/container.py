@@ -8,7 +8,7 @@ from core.application import ApplicationMediator, HandlerContainer, IUnitOfWork
 from core.domain.events import BaseEvent, IEventBus
 from core.infrastructure.events import EventBusEmitter
 from core.infrastructure.outbox import TransactionalOutbox
-from identity.infrastructure.persistence.directory_repository import DirectoryRepository
+from identity.infrastructure.persistence.site_repository import SiteRepository
 from identity.infrastructure.persistence.employee_assignment_repository import EmployeeAssignmentRepository
 from identity.infrastructure.persistence.employee_repository import EmployeeRepository
 from punch.application.commands import CreateTimeEntryCommand
@@ -23,7 +23,7 @@ class PunchesContainer:
 
     time_entry_repository: TimeEntryRepository
     employee_repository: EmployeeRepository
-    directory_repository: DirectoryRepository
+    site_repository: SiteRepository
     employee_assignment_repository: EmployeeAssignmentRepository
     unit_of_work: IUnitOfWork
     event_bus: IEventBus[BaseEvent]
@@ -47,7 +47,7 @@ class PunchesContainer:
                 unit_of_work=self.unit_of_work,
                 time_entry_repository=self.time_entry_repository,
                 employee_repository=self.employee_repository,
-                directory_repository=self.directory_repository,
+                site_repository=self.site_repository,
                 employee_assignment_repository=self.employee_assignment_repository,
                 event_outbox=self.event_outbox,
             )
@@ -69,7 +69,7 @@ def build_punches_container(
     """Build a request-scoped punch container."""
     return PunchesContainer(
         employee_repository=EmployeeRepository(session),
-        directory_repository=DirectoryRepository(session),
+        site_repository=SiteRepository(session),
         employee_assignment_repository=EmployeeAssignmentRepository(session),
         time_entry_repository=TimeEntryRepository(session),
         unit_of_work=SQLAlchemyUnitOfWork(session),

@@ -22,6 +22,7 @@ from ..domain.events import (
     SiteActivated,
     SiteCreated,
     SiteDeactivated,
+    SiteMadePrincipal,
     UserDeactivated,
     UserRegistered,
     UserRoleChanged,
@@ -57,6 +58,11 @@ class UserDeactivatedNotification(DCNotificationEvent[dict]):
 
 @dataclass(frozen=True)
 class SiteCreatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class SiteMadePrincipalNotification(DCNotificationEvent[dict]):
     pass
 
 
@@ -159,6 +165,10 @@ def to_site_deactivated(event: SiteDeactivated) -> SiteDeactivatedNotification:
     return _notification(SiteDeactivatedNotification, event, {"site_id": event.get_aggregate_id().value})
 
 
+def to_site_made_principal(event: SiteMadePrincipal) -> SiteMadePrincipalNotification:
+    return _notification(SiteMadePrincipalNotification, event, {"site_id": event.get_aggregate_id().value})
+
+
 def to_employee_assigned(event: EmployeeAssigned) -> EmployeeAssignedNotification:
     return _notification(
         EmployeeAssignedNotification,
@@ -184,6 +194,7 @@ USERS_EVENT_MAPPERS: dict[type, object] = {
     SiteCreated: to_site_created,
     SiteActivated: to_site_activated,
     SiteDeactivated: to_site_deactivated,
+    SiteMadePrincipal: to_site_made_principal,
     EmployeeAssigned: to_employee_assigned,
     EmployeeAssignmentEnded: to_employee_assignment_ended,
 }
@@ -197,6 +208,7 @@ USERS_EVENT_REGISTRY: dict[str, type] = {
     "users.site.created": SiteCreatedNotification,
     "users.site.activated": SiteActivatedNotification,
     "users.site.deactivated": SiteDeactivatedNotification,
+    "users.site.made_principal": SiteMadePrincipalNotification,
     "users.employee_assignment.created": EmployeeAssignedNotification,
     "users.employee_assignment.ended": EmployeeAssignmentEndedNotification,
 }
