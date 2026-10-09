@@ -14,7 +14,9 @@ from core.domain.events import BaseEvent
 from ..domain.events import (
     EmployeeScheduleAssigned,
     EmployeeScheduleEnded,
+    EmployeeScheduleImported,
     TimeProfileCreated,
+    TimeProfileImported,
     TimeProfileVersionAdded,
 )
 
@@ -100,6 +102,9 @@ PLANNING_EVENT_MAPPERS: dict[type, object] = {
     TimeProfileVersionAdded: to_time_profile_version_added,
     EmployeeScheduleAssigned: to_employee_schedule_assigned,
     EmployeeScheduleEnded: to_employee_schedule_ended,
+    # Takeover of the state tables: stored, never published.
+    TimeProfileImported: None,
+    EmployeeScheduleImported: None,
 }
 
 PLANNING_EVENT_REGISTRY: dict[str, type] = {

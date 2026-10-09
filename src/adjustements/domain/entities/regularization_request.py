@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from ..events.regularization_request_events import RegularizationRequestCreated
+from ..events.regularization_request_events import RegularizationRequestCreated, RegularizationRequestImported
 from ..value_objects import AnomalyId, RegularizationRequestId, RegularizationStatus
 from core.domain.entity import AggregateRoot
 
@@ -54,20 +54,44 @@ class RegularizationRequest(AggregateRoot[RegularizationRequestId]):
         proposed_time: datetime,
         status: RegularizationStatus,
         anomaly_id: AnomalyId
-    ) -> RegularizationRequest:
+    ) -> "RegularizationRequest":
         """
         Factory for a brand-new regularization request; records: class:`RegularizationRequestCreated`.
         """
-        regularization_request = cls(
-            regularization_request_id,
-            request_at=request_at,
-            reason=reason,
-            proposed_time=proposed_time,
-            status=status,
-            anomaly_id=anomaly_id
+        regularization_request = cls.rehydrate(regularization_request_id, [])
+        regularization_request._raise(
+            RegularizationRequestCreated(
+                regularization_request_id,
+                anomaly_id=anomaly_id,
+                request_at=request_at,
+                reason=reason,
+                proposed_time=proposed_time,
+                status=status,
+            )
         )
-        regularization_request.record_event(RegularizationRequestCreated(regularization_request_id))
         return regularization_request
+
+    def _apply(self, event) -> None:
+        match event:
+            case RegularizationRequestCreated():
+                self._anomaly_id = event.anomaly_id
+                self._request_at = event.request_at
+                self._reason = event.reason
+                self._proposed_time = event.proposed_time
+                self._status = event.status
+                self._decision_comment = None
+                self._validated_at = None
+            case RegularizationRequestImported():
+                self._anomaly_id = event.anomaly_id
+                self._request_at = event.request_at
+                self._reason = event.reason
+                self._proposed_time = event.proposed_time
+                self._status = event.status
+                self._decision_comment = event.decision_comment
+                self._validated_at = event.validated_at
+                self._created_at = event.created_at
+            case _:
+                super()._apply(event)
 
     @property
     def anomaly_id(self) -> AnomalyId:

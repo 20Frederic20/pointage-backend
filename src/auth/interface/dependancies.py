@@ -13,7 +13,7 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from dependencies import get_db_session, get_password_hasher
+from dependencies import get_password_hasher, get_write_session
 from identity.application.ports import PasswordHasher
 
 from ..application.dtos import PrincipalDTO
@@ -38,17 +38,19 @@ def get_email_sender(request: Request) -> EmailSender:
 
 def get_auth(
     request: Request,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_write_session),
     password_hasher: PasswordHasher = Depends(get_password_hasher),
     token_issuer: TokenIssuer = Depends(get_token_issuer),
 ) -> AuthContainer:
-    """One auth container per request, wired over the request-scoped session."""
+    """One auth container per request, wired over the request-scoped write session
+    (auth's own tables live in the write database)."""
     app_container = request.app.state.container
     return build_auth_container(
         session=session,
         event_bus=app_container.event_bus,
         user_accounts=IdentityUserAccounts(
             session_factory=app_container.session_factory,
+            read_session_factory=app_container.read_session_factory,
             event_bus=app_container.event_bus,
             password_hasher=password_hasher,
         ),

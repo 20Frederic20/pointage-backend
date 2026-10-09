@@ -1,3 +1,8 @@
+-- HISTORICAL: the single-database schema from before event sourcing.
+-- The schemas in use are now sql/event_store.sql (write database) and
+-- sql/read_model.sql (read database: the same state tables, now read models).
+-- Kept as the history of the existing pointage_db, whose state tables are
+-- taken over by scripts/import_state_to_event_store.py.
 
 
 -------------------------------------------------------------------------

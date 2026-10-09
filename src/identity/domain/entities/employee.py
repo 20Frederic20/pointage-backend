@@ -1,13 +1,9 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Self
 
 from core.domain.entity import AggregateRoot
 from identity.domain import EmployeeId, Role, UserId
-from identity.domain.events import EmployeeCreated
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+from identity.domain.events.employee_events import EmployeeCreated, EmployeeImported, EmployeeUpdated
 
 
 class Employee(AggregateRoot[EmployeeId]):
@@ -52,15 +48,17 @@ class Employee(AggregateRoot[EmployeeId]):
         """
         Founding signup: the first employee of a brand-new workspace,.
         """
-        employee = cls(
-            employee_id,
-            user_id=user_id,
-            role=role,
-            employee_number=employee_number,
-            is_active=is_active,
-            phone=phone
+        employee = cls.rehydrate(employee_id, [])
+        employee._raise(
+            EmployeeCreated(
+                employee_id,
+                user_id=user_id,
+                employee_number=employee_number,
+                is_active=is_active,
+                phone=phone,
+                role=role,
+            )
         )
-        employee.record_event(EmployeeCreated(employee_id))
         return employee
 
     def update (
@@ -70,14 +68,34 @@ class Employee(AggregateRoot[EmployeeId]):
         is_active: bool | None,
         phone: str | None,
     ) -> None:
+        """Apply the fields sent (``None`` = untouched); nothing changed: nothing recorded."""
+        event = EmployeeUpdated(
+            self.id,
+            employee_number=employee_number if employee_number is not None else self._employee_number,
+            is_active=is_active if is_active is not None else self._is_active,
+            phone=phone if phone is not None else self._phone,
+        )
+        if (event.employee_number, event.is_active, event.phone) == (self._employee_number, self._is_active, self._phone):
+            return
+        self._raise(event)
 
-        if employee_number is not None:
-            self._employee_number = employee_number
-        if is_active is not None:
-            self._is_active = is_active
-        if phone is not None:
-            self._phone = phone
-        self.touch()
+    def _apply(self, event) -> None:
+        match event:
+            case EmployeeCreated() | EmployeeImported():
+                self._employee_id = event.employee_id
+                self._user_id = event.user_id
+                self._employee_number = event.employee_number
+                self._is_active = event.is_active
+                self._phone = event.phone
+                self._role = event.role
+                if isinstance(event, EmployeeImported):
+                    self._created_at = event.created_at
+            case EmployeeUpdated():
+                self._employee_number = event.employee_number
+                self._is_active = event.is_active
+                self._phone = event.phone
+            case _:
+                super()._apply(event)
 
     @property
     def user_id(self) -> UserId:

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from punch.domain import EntrySource, LocationConfidence
 
@@ -15,8 +15,8 @@ class CreateTimeEntryRequest(_CamelSchema):
     longitude: float
     latitude: float
     source: EntrySource
-    idempotency_key: str
-    wifi_identifier: str | None = None
+    idempotency_key: str = Field(min_length=1, max_length=255)
+    wifi_identifier: str | None = Field(default=None, max_length=255)
 
 
 class TimeEntryResponse(_CamelSchema):

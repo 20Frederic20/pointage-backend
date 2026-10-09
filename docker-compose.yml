@@ -1,4 +1,6 @@
 services:
+  # Write database: the event store (events, unique_keys), the outbox and
+  # auth's tables. src/sql/event_store.sql runs on a new volume.
   pointage_db:
     image: ghcr.io/baosystems/postgis:16-3.5
     container_name: pointage_db
@@ -10,6 +12,27 @@ services:
       - '7433:5432'
     volumes:
       - pointage_db_data:/var/lib/postgresql/data
+      - ./src/sql/event_store.sql:/docker-entrypoint-initdb.d/10_event_store.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Read database: the read models, fed by the projection runner.
+  # src/sql/read_model.sql runs on a new volume.
+  pointage_read_db:
+    image: ghcr.io/baosystems/postgis:16-3.5
+    container_name: pointage_read_db
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       pointage_read_db
+    ports:
+      - '7434:5432'
+    volumes:
+      - pointage_read_db_data:/var/lib/postgresql/data
+      - ./src/sql/read_model.sql:/docker-entrypoint-initdb.d/10_read_model.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
@@ -64,3 +87,4 @@ services:
 
 volumes:
     pointage_db_data:
+    pointage_read_db_data:

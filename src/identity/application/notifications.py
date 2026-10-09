@@ -16,14 +16,25 @@ from core.domain.events import BaseEvent
 
 from ..domain.events import (
     DirectoryCreated,
+    DirectoryImported,
+    DirectoryUpdated,
     EmployeeAssigned,
     EmployeeAssignmentEnded,
+    EmployeeAssignmentImported,
     EmployeeCreated,
+    EmployeeImported,
+    EmployeeUpdated,
     SiteActivated,
     SiteCreated,
     SiteDeactivated,
+    SiteImported,
+    SiteMadeAnnex,
     SiteMadePrincipal,
+    UserActivityRecorded,
     UserDeactivated,
+    UserImported,
+    UserPasswordCleared,
+    UserProfileUpdated,
     UserRegistered,
     UserRoleChanged,
 )
@@ -73,6 +84,31 @@ class SiteActivatedNotification(DCNotificationEvent[dict]):
 
 @dataclass(frozen=True)
 class SiteDeactivatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class SiteMadeAnnexNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class DirectoryUpdatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class UserProfileUpdatedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class UserPasswordClearedNotification(DCNotificationEvent[dict]):
+    pass
+
+
+@dataclass(frozen=True)
+class EmployeeUpdatedNotification(DCNotificationEvent[dict]):
     pass
 
 
@@ -169,6 +205,26 @@ def to_site_made_principal(event: SiteMadePrincipal) -> SiteMadePrincipalNotific
     return _notification(SiteMadePrincipalNotification, event, {"site_id": event.get_aggregate_id().value})
 
 
+def to_site_made_annex(event: SiteMadeAnnex) -> SiteMadeAnnexNotification:
+    return _notification(SiteMadeAnnexNotification, event, {"site_id": event.get_aggregate_id().value})
+
+
+def to_directory_updated(event: DirectoryUpdated) -> DirectoryUpdatedNotification:
+    return _notification(DirectoryUpdatedNotification, event, {"directory_id": event.get_aggregate_id().value})
+
+
+def to_user_profile_updated(event: UserProfileUpdated) -> UserProfileUpdatedNotification:
+    return _notification(UserProfileUpdatedNotification, event, {"user_id": event.get_aggregate_id().value})
+
+
+def to_user_password_cleared(event: UserPasswordCleared) -> UserPasswordClearedNotification:
+    return _notification(UserPasswordClearedNotification, event, {"user_id": event.get_aggregate_id().value})
+
+
+def to_employee_updated(event: EmployeeUpdated) -> EmployeeUpdatedNotification:
+    return _notification(EmployeeUpdatedNotification, event, {"employee_id": event.get_aggregate_id().value})
+
+
 def to_employee_assigned(event: EmployeeAssigned) -> EmployeeAssignedNotification:
     return _notification(
         EmployeeAssignedNotification,
@@ -197,6 +253,19 @@ USERS_EVENT_MAPPERS: dict[type, object] = {
     SiteMadePrincipal: to_site_made_principal,
     EmployeeAssigned: to_employee_assigned,
     EmployeeAssignmentEnded: to_employee_assignment_ended,
+    SiteMadeAnnex: to_site_made_annex,
+    DirectoryUpdated: to_directory_updated,
+    UserProfileUpdated: to_user_profile_updated,
+    UserPasswordCleared: to_user_password_cleared,
+    EmployeeUpdated: to_employee_updated,
+    # Stored in the event store, never published: presence telemetry (one per
+    # login) and the one-off takeover of the state tables.
+    UserActivityRecorded: None,
+    DirectoryImported: None,
+    UserImported: None,
+    EmployeeImported: None,
+    EmployeeAssignmentImported: None,
+    SiteImported: None,
 }
 
 USERS_EVENT_REGISTRY: dict[str, type] = {
@@ -211,4 +280,9 @@ USERS_EVENT_REGISTRY: dict[str, type] = {
     "users.site.made_principal": SiteMadePrincipalNotification,
     "users.employee_assignment.created": EmployeeAssignedNotification,
     "users.employee_assignment.ended": EmployeeAssignmentEndedNotification,
+    "users.site.made_annex": SiteMadeAnnexNotification,
+    "users.directory.updated": DirectoryUpdatedNotification,
+    "users.user.profile_updated": UserProfileUpdatedNotification,
+    "users.user.password_cleared": UserPasswordClearedNotification,
+    "users.employee.updated": EmployeeUpdatedNotification,
 }

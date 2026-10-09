@@ -11,7 +11,7 @@ from cqrs.events.event import DCNotificationEvent
 
 from core.domain.events import BaseEvent
 
-from ..domain.events import PeriodClosed, PeriodLocked, PeriodOpened
+from ..domain.events import PeriodClosed, PeriodImported, PeriodLocked, PeriodOpened
 
 PERIODS_TOPIC = "periods"
 
@@ -62,6 +62,8 @@ PERIODS_EVENT_MAPPERS: dict[type, object] = {
     PeriodOpened: to_period_opened,
     PeriodLocked: to_period_locked,
     PeriodClosed: to_period_closed,
+    # Takeover of the state tables: stored, never published.
+    PeriodImported: None,
 }
 
 PERIODS_EVENT_REGISTRY: dict[str, type] = {

@@ -7,24 +7,31 @@ from core.infrastructure.database import SQLAlchemyUnitOfWork
 from core.application import ApplicationMediator, HandlerContainer, IUnitOfWork
 from core.domain.events import BaseEvent, IEventBus
 from core.infrastructure.events import EventBusEmitter
+from core.infrastructure.event_store import EventStore
 from core.infrastructure.outbox import TransactionalOutbox
-from identity.infrastructure.persistence.site_repository import SiteRepository
-from identity.infrastructure.persistence.employee_assignment_repository import EmployeeAssignmentRepository
-from identity.infrastructure.persistence.employee_repository import EmployeeRepository
+from identity.infrastructure.persistence.event_sourced_employee_assignment_repository import (
+    EventSourcedEmployeeAssignmentRepository,
+)
+from identity.infrastructure.persistence.event_sourced_employee_repository import EventSourcedEmployeeRepository
+from identity.infrastructure.persistence.event_sourced_site_repository import EventSourcedSiteRepository
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.handlers.create_time_entry_handler import CreateTimeEntryHandler
 from punch.application.notifications import PUNCHES_EVENT_MAPPERS
-from punch.infrastructure.persistence.time_entry_repository import TimeEntryRepository
+from punch.infrastructure.persistence.event_sourced_time_entry_repository import EventSourcedTimeEntryRepository
 
 
 @dataclass
 class PunchesContainer:
-    """Request-scope wiring for the punch bounded context."""
+    """Request-scope wiring for the punch bounded context.
 
-    time_entry_repository: TimeEntryRepository
-    employee_repository: EmployeeRepository
-    site_repository: SiteRepository
-    employee_assignment_repository: EmployeeAssignmentRepository
+    Commands load and save aggregates through the event store (write
+    database); queries, when the context has some, read the read models.
+    """
+
+    time_entry_repository: EventSourcedTimeEntryRepository
+    employee_repository: EventSourcedEmployeeRepository
+    site_repository: EventSourcedSiteRepository
+    employee_assignment_repository: EventSourcedEmployeeAssignmentRepository
     unit_of_work: IUnitOfWork
     event_bus: IEventBus[BaseEvent]
     event_outbox: TransactionalOutbox | None = None
@@ -62,17 +69,22 @@ class PunchesContainer:
 
 def build_punches_container(
     *,
-    session: AsyncSession,
+    write_session: AsyncSession,
+    read_session: AsyncSession,
     event_bus: IEventBus[BaseEvent],
     event_outbox: TransactionalOutbox | None = None,
 ) -> PunchesContainer:
-    """Build a request-scoped punch container."""
+    """Build a request-scoped punch container.
+
+    ``read_session`` is unused for now: the context has no query handler yet.
+    """
+    event_store = EventStore(write_session)
     return PunchesContainer(
-        employee_repository=EmployeeRepository(session),
-        site_repository=SiteRepository(session),
-        employee_assignment_repository=EmployeeAssignmentRepository(session),
-        time_entry_repository=TimeEntryRepository(session),
-        unit_of_work=SQLAlchemyUnitOfWork(session),
+        employee_repository=EventSourcedEmployeeRepository(event_store),
+        site_repository=EventSourcedSiteRepository(event_store),
+        employee_assignment_repository=EventSourcedEmployeeAssignmentRepository(event_store),
+        time_entry_repository=EventSourcedTimeEntryRepository(event_store),
+        unit_of_work=SQLAlchemyUnitOfWork(write_session),
         event_bus=event_bus,
-        event_outbox=event_outbox or TransactionalOutbox(session=session, mappers=PUNCHES_EVENT_MAPPERS),
+        event_outbox=event_outbox or TransactionalOutbox(session=write_session, mappers=PUNCHES_EVENT_MAPPERS),
     )

@@ -1,4 +1,11 @@
-from .persistence import AnomalyModel, RegularizationRequestModel, AnomalyRepository, RegularizationRequestRepository
+from .persistence import (
+    AnomalyModel,
+    RegularizationRequestModel,
+    AnomalyRepository,
+    RegularizationRequestRepository,
+    EventSourcedAnomalyRepository,
+    EventSourcedRegularizationRequestRepository,
+)
 
 
 __all__ = [
@@ -6,4 +13,6 @@ __all__ = [
     "RegularizationRequestModel",
     "AnomalyRepository",
     "RegularizationRequestRepository",
+    "EventSourcedAnomalyRepository",
+    "EventSourcedRegularizationRequestRepository",
 ]

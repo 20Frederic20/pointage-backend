@@ -19,25 +19,30 @@ class TransactionalOutbox(IEventOutbox):
     Domain events become *integration events* (cqrs
     ``INotificationEvent``) via the ``mappers`` registry each bounded context
     wires in its composition root — the domain event itself never leaves the
-    process, and not every domain event has to become an integration event.
+    process, and not every domain event has to become an integration event:
+    a context maps such an event to ``None`` explicitly (an unmapped event is
+    still an error, so a new event is never silently dropped).
     """
 
     def __init__(
         self,
         *,
         session: AsyncSession,
-        mappers: Mapping[type[BaseEvent], Callable[[BaseEvent], INotificationEvent]],
+        mappers: Mapping[type[BaseEvent], Callable[[BaseEvent], INotificationEvent] | None],
     ) -> None:
         self._session = session
         self._mappers = mappers
 
     def add(self, event: BaseEvent) -> None:
-        mapper = self._mappers.get(type(event))
-        if mapper is None:
+        if type(event) not in self._mappers:
             raise TypeError(
                 f"No notification-event mapping registered for {type(event).__name__}; "
-                f"add one to the context's outbox mappers to publish it"
+                f"add one to the context's outbox mappers to publish it "
+                f"(or map it to None to keep it inside the context)"
             )
+        mapper = self._mappers[type(event)]
+        if mapper is None:
+            return  # explicitly internal: stored in the event store, never published
         notification = mapper(event)
         self._session.add(
             OutboxModel(

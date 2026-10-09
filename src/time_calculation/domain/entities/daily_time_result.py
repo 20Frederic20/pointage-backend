@@ -6,7 +6,7 @@ from identity.domain import EmployeeId
 from periods.domain import PeriodId
 
 from ..errors import BlockedDailyTimeResultError, DailyTimeResultValidatedError
-from ..events import DailyTimeResultCalculated, DailyTimeResultValidated
+from ..events import DailyTimeResultCalculated, DailyTimeResultImported, DailyTimeResultValidated
 from ..services.daily_time_calculator import Clocking, DailyTimeCalculator, Interval
 from ..value_objects import CalculationRuleVersionId, DailyResultStatus, DailyTimeResultId, PlannedDay
 from .calculation_rule_version import CalculationRuleVersion
@@ -77,20 +77,19 @@ class DailyTimeResult(AggregateRoot[DailyTimeResultId]):
         has_open_anomaly: bool,
     ) -> "DailyTimeResult":
         """``calculer``: the first calculation of a work date."""
-        result = cls(
-            daily_time_result_id,
-            employee_id=employee_id,
-            period_id=period_id,
-            calculation_rule_version_id=rules.id,
-            work_date=work_date,
-        )
-        result._apply(
-            rules=rules,
-            planned_day=planned_day,
-            clockings=clockings,
-            absences=absences,
-            has_open_blocking_anomaly=has_open_blocking_anomaly,
-            has_open_anomaly=has_open_anomaly,
+        result = cls.rehydrate(daily_time_result_id, [])
+        result._raise(
+            result._calculation(
+                employee_id=employee_id,
+                period_id=period_id,
+                work_date=work_date,
+                rules=rules,
+                planned_day=planned_day,
+                clockings=clockings,
+                absences=absences,
+                has_open_blocking_anomaly=has_open_blocking_anomaly,
+                has_open_anomaly=has_open_anomaly,
+            )
         )
         return result
 
@@ -111,15 +110,18 @@ class DailyTimeResult(AggregateRoot[DailyTimeResultId]):
                 f"Daily result of {self._work_date} is validated and cannot be recalculated",
                 context=self.id.value,
             )
-        self._period_id = period_id
-        self._calculation_rule_version_id = rules.id
-        self._apply(
-            rules=rules,
-            planned_day=planned_day,
-            clockings=clockings,
-            absences=absences,
-            has_open_blocking_anomaly=has_open_blocking_anomaly,
-            has_open_anomaly=has_open_anomaly,
+        self._raise(
+            self._calculation(
+                employee_id=self._employee_id,
+                period_id=period_id,
+                work_date=self._work_date,
+                rules=rules,
+                planned_day=planned_day,
+                clockings=clockings,
+                absences=absences,
+                has_open_blocking_anomaly=has_open_blocking_anomaly,
+                has_open_anomaly=has_open_anomaly,
+            )
         )
 
     def validate(self) -> None:
@@ -132,20 +134,22 @@ class DailyTimeResult(AggregateRoot[DailyTimeResultId]):
                 f"Daily result of {self._work_date} is blocked by an open blocking anomaly",
                 context=self.id.value,
             )
-        self._status = DailyResultStatus.VALIDATED
-        self.touch()
-        self.record_event(DailyTimeResultValidated(self.id))
+        self._raise(DailyTimeResultValidated(self.id))
 
-    def _apply(
+    def _calculation(
         self,
         *,
+        employee_id: EmployeeId,
+        period_id: PeriodId,
+        work_date: date,
         rules: CalculationRuleVersion,
         planned_day: PlannedDay | None,
         clockings: Sequence[Clocking],
         absences: Sequence[Interval],
         has_open_blocking_anomaly: bool,
         has_open_anomaly: bool,
-    ) -> None:
+    ) -> DailyTimeResultCalculated:
+        """Compute the day; the event carries every result so replay never recomputes."""
         worked, breaks, has_unpaired = DailyTimeCalculator.worked_time(clockings)
         worked, breaks = DailyTimeCalculator.enforce_minimum_break(
             worked,
@@ -159,20 +163,47 @@ class DailyTimeResult(AggregateRoot[DailyTimeResultId]):
             max_daily_work_duration=rules.max_daily_work_duration,
             max_amplitude=rules.max_amplitude,
         )
-        self._planned_duration = planned_day.planned_duration if planned_day is not None else timedelta(0)
-        self._worked_duration = worked
-        self._break_duration = breaks
-        self._absence_duration = DailyTimeCalculator.absence_time(planned_day, absences)
-        self._late_duration = DailyTimeCalculator.lateness(clockings, planned_day, absences)
         if has_open_blocking_anomaly:
-            self._status = DailyResultStatus.BLOCKED
+            status = DailyResultStatus.BLOCKED
         elif has_unpaired or has_overrun or has_open_anomaly:
-            self._status = DailyResultStatus.ANOMALY
+            status = DailyResultStatus.ANOMALY
         else:
-            self._status = DailyResultStatus.NORMAL
-        self._calculated_at = datetime.now(UTC)
-        self.touch()
-        self.record_event(DailyTimeResultCalculated(self.id))
+            status = DailyResultStatus.NORMAL
+        return DailyTimeResultCalculated(
+            self.id,
+            employee_id=employee_id,
+            period_id=period_id,
+            calculation_rule_version_id=rules.id,
+            work_date=work_date,
+            planned_duration=planned_day.planned_duration if planned_day is not None else timedelta(0),
+            worked_duration=worked,
+            break_duration=breaks,
+            absence_duration=DailyTimeCalculator.absence_time(planned_day, absences),
+            late_duration=DailyTimeCalculator.lateness(clockings, planned_day, absences),
+            status=status,
+            calculated_at=datetime.now(UTC),
+        )
+
+    def _apply(self, event) -> None:
+        match event:
+            case DailyTimeResultCalculated() | DailyTimeResultImported():
+                self._employee_id = event.employee_id
+                self._period_id = event.period_id
+                self._calculation_rule_version_id = event.calculation_rule_version_id
+                self._work_date = event.work_date
+                self._planned_duration = event.planned_duration
+                self._worked_duration = event.worked_duration
+                self._break_duration = event.break_duration
+                self._absence_duration = event.absence_duration
+                self._late_duration = event.late_duration
+                self._status = event.status
+                self._calculated_at = event.calculated_at
+                if isinstance(event, DailyTimeResultImported):
+                    self._created_at = event.created_at
+            case DailyTimeResultValidated():
+                self._status = DailyResultStatus.VALIDATED
+            case _:
+                super()._apply(event)
 
     @property
     def employee_id(self) -> EmployeeId:

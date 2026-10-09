@@ -13,6 +13,11 @@ from cqrs.events import EventHandler
 
 from .notifications import (
     DirectoryCreatedNotification,
+    DirectoryUpdatedNotification,
+    EmployeeUpdatedNotification,
+    SiteMadeAnnexNotification,
+    UserPasswordClearedNotification,
+    UserProfileUpdatedNotification,
     EmployeeAssignedNotification,
     EmployeeAssignmentEndedNotification,
     EmployeeCreatedNotification,
@@ -100,6 +105,31 @@ class EmployeeAssignmentEndedConsumer(EventHandler[EmployeeAssignmentEndedNotifi
         _log(event)
 
 
+class SiteMadeAnnexConsumer(EventHandler[SiteMadeAnnexNotification]):
+    async def handle(self, event: SiteMadeAnnexNotification) -> None:
+        _log(event)
+
+
+class DirectoryUpdatedConsumer(EventHandler[DirectoryUpdatedNotification]):
+    async def handle(self, event: DirectoryUpdatedNotification) -> None:
+        _log(event)
+
+
+class UserProfileUpdatedConsumer(EventHandler[UserProfileUpdatedNotification]):
+    async def handle(self, event: UserProfileUpdatedNotification) -> None:
+        _log(event)
+
+
+class UserPasswordClearedConsumer(EventHandler[UserPasswordClearedNotification]):
+    async def handle(self, event: UserPasswordClearedNotification) -> None:
+        _log(event)
+
+
+class EmployeeUpdatedConsumer(EventHandler[EmployeeUpdatedNotification]):
+    async def handle(self, event: EmployeeUpdatedNotification) -> None:
+        _log(event)
+
+
 USERS_CONSUMERS: dict[type, type] = {
     DirectoryCreatedNotification: DirectoryCreatedConsumer,
     EmployeeCreatedNotification: EmployeeCreatedConsumer,
@@ -112,4 +142,9 @@ USERS_CONSUMERS: dict[type, type] = {
     SiteMadePrincipalNotification: SiteMadePrincipalConsumer,
     EmployeeAssignedNotification: EmployeeAssignedConsumer,
     EmployeeAssignmentEndedNotification: EmployeeAssignmentEndedConsumer,
+    SiteMadeAnnexNotification: SiteMadeAnnexConsumer,
+    DirectoryUpdatedNotification: DirectoryUpdatedConsumer,
+    UserProfileUpdatedNotification: UserProfileUpdatedConsumer,
+    UserPasswordClearedNotification: UserPasswordClearedConsumer,
+    EmployeeUpdatedNotification: EmployeeUpdatedConsumer,
 }

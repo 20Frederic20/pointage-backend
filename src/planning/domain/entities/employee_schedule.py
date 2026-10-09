@@ -4,7 +4,7 @@ from core.domain.entity import AggregateRoot
 from identity.domain import EmployeeId
 
 from ..errors import InvalidScheduleDatesError
-from ..events import EmployeeScheduleAssigned, EmployeeScheduleEnded
+from ..events import EmployeeScheduleAssigned, EmployeeScheduleEnded, EmployeeScheduleImported
 from ..value_objects import EmployeeScheduleId, TimeProfileVersionId
 
 
@@ -42,14 +42,17 @@ class EmployeeSchedule(AggregateRoot[EmployeeScheduleId]):
         start_date: date,
         end_date: date | None = None,
     ) -> "EmployeeSchedule":
-        schedule = cls(
-            employee_schedule_id,
-            employee_id=employee_id,
-            time_profile_version_id=time_profile_version_id,
-            start_date=start_date,
-            end_date=end_date,
+        _check_dates(start_date, end_date, employee_schedule_id)
+        schedule = cls.rehydrate(employee_schedule_id, [])
+        schedule._raise(
+            EmployeeScheduleAssigned(
+                employee_schedule_id,
+                employee_id=employee_id,
+                time_profile_version_id=time_profile_version_id,
+                start_date=start_date,
+                end_date=end_date,
+            )
         )
-        schedule.record_event(EmployeeScheduleAssigned(employee_schedule_id))
         return schedule
 
     def is_applicable(self, day: date) -> bool:
@@ -59,9 +62,21 @@ class EmployeeSchedule(AggregateRoot[EmployeeScheduleId]):
     def end(self, end_date: date) -> None:
         """``terminer``: the schedule's last day is ``end_date``."""
         _check_dates(self._start_date, end_date, self.id)
-        self._end_date = end_date
-        self.touch()
-        self.record_event(EmployeeScheduleEnded(self.id))
+        self._raise(EmployeeScheduleEnded(self.id, end_date=end_date))
+
+    def _apply(self, event) -> None:
+        match event:
+            case EmployeeScheduleAssigned() | EmployeeScheduleImported():
+                self._employee_id = event.employee_id
+                self._time_profile_version_id = event.time_profile_version_id
+                self._start_date = event.start_date
+                self._end_date = event.end_date
+                if isinstance(event, EmployeeScheduleImported):
+                    self._created_at = event.created_at
+            case EmployeeScheduleEnded():
+                self._end_date = event.end_date
+            case _:
+                super()._apply(event)
 
     @property
     def employee_id(self) -> EmployeeId:

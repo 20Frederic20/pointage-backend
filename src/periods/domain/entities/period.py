@@ -8,7 +8,7 @@ from ..errors import (
     PeriodHasBlockingAnomaliesError,
     PeriodNotOpenError,
 )
-from ..events import PeriodClosed, PeriodLocked, PeriodOpened
+from ..events import PeriodClosed, PeriodImported, PeriodLocked, PeriodOpened
 from ..value_objects import PeriodId, PeriodStatus
 
 
@@ -42,9 +42,35 @@ class Period(AggregateRoot[PeriodId]):
 
     @classmethod
     def open(cls, period_id: PeriodId, *, start_date: date, end_date: date) -> "Period":
-        period = cls(period_id, start_date=start_date, end_date=end_date)
-        period.record_event(PeriodOpened(period_id))
+        if end_date < start_date:
+            raise InvalidPeriodDatesError(
+                f"Period ends ({end_date}) before it starts ({start_date})",
+                context=period_id.value,
+            )
+        period = cls.rehydrate(period_id, [])
+        period._raise(PeriodOpened(period_id, start_date=start_date, end_date=end_date))
         return period
+
+    def _apply(self, event) -> None:
+        match event:
+            case PeriodOpened():
+                self._start_date = event.start_date
+                self._end_date = event.end_date
+                self._status = PeriodStatus.OPEN
+                self._closed_at = None
+            case PeriodLocked():
+                self._status = PeriodStatus.CLOSING
+            case PeriodClosed():
+                self._status = PeriodStatus.CLOSED
+                self._closed_at = event.closed_at
+            case PeriodImported():
+                self._start_date = event.start_date
+                self._end_date = event.end_date
+                self._status = event.status
+                self._closed_at = event.closed_at
+                self._created_at = event.created_at
+            case _:
+                super()._apply(event)
 
     def contains(self, day: date) -> bool:
         return self._start_date <= day <= self._end_date
@@ -53,9 +79,7 @@ class Period(AggregateRoot[PeriodId]):
         """``verrouiller``: freeze the period before closing it."""
         if self._status != PeriodStatus.OPEN:
             raise PeriodNotOpenError(f"Period is {self._status}, not OPEN", context=self.id.value)
-        self._status = PeriodStatus.CLOSING
-        self.touch()
-        self.record_event(PeriodLocked(self.id))
+        self._raise(PeriodLocked(self.id))
 
     def can_be_closed(self, *, has_open_blocking_anomalies: bool) -> bool:
         """``peutEtreCloturee``."""
@@ -69,10 +93,7 @@ class Period(AggregateRoot[PeriodId]):
             raise PeriodHasBlockingAnomaliesError(
                 "Period still has open blocking anomalies", context=self.id.value
             )
-        self._status = PeriodStatus.CLOSED
-        self._closed_at = datetime.now(UTC)
-        self.touch()
-        self.record_event(PeriodClosed(self.id))
+        self._raise(PeriodClosed(self.id, closed_at=datetime.now(UTC)))
 
     def is_closed(self) -> bool:
         """``estCloturee``."""

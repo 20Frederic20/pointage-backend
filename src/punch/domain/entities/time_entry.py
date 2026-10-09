@@ -4,7 +4,7 @@ from typing import Self
 from core.domain.entity import AggregateRoot
 from identity.domain import EmployeeId
 from identity.domain.value_objects.location import Location
-from punch.domain.events import TimeEntryCreated
+from punch.domain.events import TimeEntryCreated, TimeEntryImported
 from punch.domain.value_objects import (
     EntrySource,
     EntryType,
@@ -78,30 +78,38 @@ class TimeEntry(AggregateRoot[TimeEntryId]):
         wifi_identifier: str | None = None,
         idempotency_key: str | None = None,
     ) -> Self:
-        """
-        :param time_entry_id:
-        :param employee_id:
-        :param entry_type:
-        :param location:
-        :param wifi_identifier:
-        :param location_confidence:
-        :param source:
-        :param idempotency_key:
-        :return:
-        """
-        time_entry = cls(
-            time_entry_id,
-            employee_id=employee_id,
-            occured_at=_utcnow(),
-            location_confidence=location_confidence,
-            entry_type=entry_type,
-            location=location,
-            wifi_identifier=wifi_identifier,
-            source=source,
-            idempotency_key=idempotency_key
+        """Record a punch, timestamped now; records :class:`TimeEntryCreated`."""
+        time_entry = cls.rehydrate(time_entry_id, [])
+        time_entry._raise(
+            TimeEntryCreated(
+                time_entry_id,
+                employee_id=employee_id,
+                entry_type=entry_type,
+                occured_at=_utcnow(),
+                location=location,
+                location_confidence=location_confidence,
+                source=source,
+                idempotency_key=idempotency_key,
+                wifi_identifier=wifi_identifier,
+            )
         )
-        time_entry.record_event(TimeEntryCreated(time_entry_id))
         return time_entry
+
+    def _apply(self, event) -> None:
+        match event:
+            case TimeEntryCreated() | TimeEntryImported():
+                self._employee_id = event.employee_id
+                self._entry_type = event.entry_type
+                self._occured_at = event.occured_at
+                self._location = event.location
+                self._location_confidence = event.location_confidence
+                self._source = event.source
+                self._idempotency_key = event.idempotency_key
+                self._wifi_identifier = event.wifi_identifier
+                if isinstance(event, TimeEntryImported):
+                    self._created_at = event.created_at
+            case _:
+                super()._apply(event)
 
     @property
     def employee_id(self) -> EmployeeId:

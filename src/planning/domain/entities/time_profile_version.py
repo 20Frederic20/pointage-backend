@@ -59,6 +59,11 @@ class TimeProfileVersion(Entity[TimeProfileVersionId]):
         self._effective_to = last_day
         self.touch()
 
+    def end_on(self, last_day: date, *, updated_at: datetime) -> None:
+        """Replay of a close recorded in an event: no validation, no clock."""
+        self._effective_to = last_day
+        self._updated_at = updated_at
+
     @property
     def version(self) -> int:
         return self._version

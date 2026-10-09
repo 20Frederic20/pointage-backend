@@ -10,6 +10,7 @@ from cqrs.events import EventHandler
 
 from .notifications import (
     AnomalyCreatedNotification,
+    AnomalyResolvedNotification,
     RegularizationRequestCreatedNotification,
 )
 
@@ -31,6 +32,11 @@ class AnomalyCreatedConsumer(EventHandler[AnomalyCreatedNotification]):
         _log(event)
 
 
+class AnomalyResolvedConsumer(EventHandler[AnomalyResolvedNotification]):
+    async def handle(self, event: AnomalyResolvedNotification) -> None:
+        _log(event)
+
+
 class RegularizationRequestCreatedConsumer(
     EventHandler[RegularizationRequestCreatedNotification]
 ):
@@ -42,5 +48,6 @@ class RegularizationRequestCreatedConsumer(
 
 ADJUSTMENTS_CONSUMERS: dict[type, type] = {
     AnomalyCreatedNotification: AnomalyCreatedConsumer,
+    AnomalyResolvedNotification: AnomalyResolvedConsumer,
     RegularizationRequestCreatedNotification: RegularizationRequestCreatedConsumer,
 }

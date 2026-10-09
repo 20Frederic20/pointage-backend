@@ -11,7 +11,14 @@ from cqrs.events.event import DCNotificationEvent
 
 from core.domain.events import BaseEvent
 
-from ..domain.events import CalculationRuleVersionCreated, DailyTimeResultCalculated, DailyTimeResultValidated
+from ..domain.events import (
+    CalculationRuleVersionClosed,
+    CalculationRuleVersionCreated,
+    CalculationRuleVersionImported,
+    DailyTimeResultCalculated,
+    DailyTimeResultImported,
+    DailyTimeResultValidated,
+)
 
 TIME_CALCULATION_TOPIC = "time_calculation"
 
@@ -80,6 +87,11 @@ TIME_CALCULATION_EVENT_MAPPERS: dict[type, object] = {
     CalculationRuleVersionCreated: to_calculation_rule_version_created,
     DailyTimeResultCalculated: to_daily_time_result_calculated,
     DailyTimeResultValidated: to_daily_time_result_validated,
+    # Internal: the previous version's end is implied by the next version's creation.
+    CalculationRuleVersionClosed: None,
+    # Takeover of the state tables: stored, never published.
+    CalculationRuleVersionImported: None,
+    DailyTimeResultImported: None,
 }
 
 TIME_CALCULATION_EVENT_REGISTRY: dict[str, type] = {

@@ -29,6 +29,10 @@ class BaseEvent[ID](IEvent):
     Implements cqrs' ``IEvent`` (``to_dict``/``from_dict``) so recorded events
     flow through the cqrs mediator unchanged. Deserialization is not supported
     in-process — events are subscribed to by type, never rehydrated.
+
+    Event sourcing: an event carries the data of the change it records
+    (``to_payload`` / ``from_payload``), so the event store can replay an
+    aggregate from its events alone.
     """
 
     def __init__(self) -> None:
@@ -74,3 +78,23 @@ class BaseEvent[ID](IEvent):
             "In-process domain events are not deserialized; "
             "subscribe by event type instead."
         )
+
+    # ---- event store (serialization of the event's own data) ----
+
+    def to_payload(self) -> dict:
+        """The event's data as JSON-ready primitives, stored in the event store.
+
+        Everything the aggregate's ``_apply`` needs to replay the change must
+        be in here — the stored payload is the only source of truth.
+        """
+        raise NotImplementedError(f"{type(self).__name__} is not stored in the event store")
+
+    @classmethod
+    def from_payload(cls, payload: dict) -> Self:
+        """Rebuild the event from :meth:`to_payload` output (event store load)."""
+        raise NotImplementedError(f"{cls.__name__} is not stored in the event store")
+
+    def restore_identity(self, event_id: str, occurred_at: datetime) -> None:
+        """Event store hook: give a loaded event its stored id and timestamp."""
+        self._event_id = event_id
+        self._occurred_at = occurred_at

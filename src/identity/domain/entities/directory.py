@@ -4,7 +4,7 @@ from typing import Self
 
 from core.domain.entity import AggregateRoot
 
-from ..events import DirectoryCreated
+from ..events.user_events import DirectoryCreated, DirectoryImported, DirectoryUpdated
 from ..value_objects.ids import DirectoryId
 
 
@@ -47,13 +47,15 @@ class Directory(AggregateRoot[DirectoryId]):
         """
         Factory for a brand-new directory; records: class:`DirectoryCreated`.
         """
-        directory = cls(
-            directory_id,
-            code=code,
-            name=name,
-            parent_directory_id=parent_directory_id,
+        directory = cls.rehydrate(directory_id, [])
+        directory._raise(
+            DirectoryCreated(
+                directory_id,
+                code=code,
+                name=name.strip(),
+                parent_directory_id=parent_directory_id,
+            )
         )
-        directory.record_event(DirectoryCreated(directory_id))
         return directory
 
     def update(
@@ -62,16 +64,33 @@ class Directory(AggregateRoot[DirectoryId]):
         code: str | None,
         name: str | None,
     ) -> None:
-
-        if code is not None:
-            self._code = code
-        if name is not None:
-            self._name = name
+        """Change the code and/or the name; nothing changed: nothing recorded."""
+        self._change(
+            code=code if code is not None else self._code,
+            name=name if name is not None else self._name,
+        )
 
     def rename(self, name: str) -> None:
         """Set the display name."""
-        self._name = name.strip()
-        self.touch()
+        self._change(code=self._code, name=name.strip())
+
+    def _change(self, *, code: str, name: str) -> None:
+        if (code, name) != (self._code, self._name):
+            self._raise(DirectoryUpdated(self.id, code=code, name=name))
+
+    def _apply(self, event) -> None:
+        match event:
+            case DirectoryCreated() | DirectoryImported():
+                self._code = event.code
+                self._name = event.name
+                self._parent_directory_id = event.parent_directory_id
+                if isinstance(event, DirectoryImported):
+                    self._created_at = event.created_at
+            case DirectoryUpdated():
+                self._code = event.code
+                self._name = event.name
+            case _:
+                super()._apply(event)
 
     @property
     def name(self) -> str:

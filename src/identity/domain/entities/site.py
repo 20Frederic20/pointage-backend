@@ -6,7 +6,14 @@ from typing import Self
 from core.domain.entity import AggregateRoot
 
 from ..errors.errors import PrincipalSiteCannotBeDeactivatedError
-from ..events.site_events import SiteActivated, SiteCreated, SiteDeactivated, SiteMadePrincipal
+from ..events.site_events import (
+    SiteActivated,
+    SiteCreated,
+    SiteDeactivated,
+    SiteImported,
+    SiteMadeAnnex,
+    SiteMadePrincipal,
+)
 from ..value_objects.ids import DirectoryId, SiteId
 from ..value_objects.location import Location
 from ..value_objects.site_kind import SiteKind
@@ -19,7 +26,7 @@ class Site(AggregateRoot[SiteId]):
     Each directory has one ``PRINCIPAL`` site; the others are ``ANNEX`` sites.
     The "one principal per directory" rule spans several sites, so the
     handlers enforce it (``CreateSiteHandler``, ``MakeSitePrincipalHandler``),
-    backed by a partial unique index in the database.
+    backed by a unique key the event-sourced repository reserves.
     """
 
     __slots__ = ("_active", "_address", "_directory_id", "_kind", "_location", "_name")
@@ -58,15 +65,17 @@ class Site(AggregateRoot[SiteId]):
         address: str | None = None,
     ) -> Self:
         """Factory for a brand-new site; records :class:`SiteCreated`."""
-        site = cls(
-            site_id,
-            directory_id=directory_id,
-            name=name,
-            location=location,
-            kind=kind,
-            address=address,
+        site = cls.rehydrate(site_id, [])
+        site._raise(
+            SiteCreated(
+                site_id,
+                directory_id=directory_id,
+                name=name.strip(),
+                location=location,
+                kind=SiteKind(kind),
+                address=address,
+            )
         )
-        site.record_event(SiteCreated(site_id))
         return site
 
     def is_principal(self) -> bool:
@@ -81,24 +90,19 @@ class Site(AggregateRoot[SiteId]):
                 f"Site {self._name!r} is inactive and cannot become principal",
                 context=self.id.value,
             )
-        self._kind = SiteKind.PRINCIPAL
-        self.touch()
-        self.record_event(SiteMadePrincipal(self.id))
+        self._raise(SiteMadePrincipal(self.id))
 
     def make_annex(self) -> None:
         """Demotion, only as the other half of :meth:`make_principal` on another site."""
         if not self.is_principal():
             return
-        self._kind = SiteKind.ANNEX
-        self.touch()
+        self._raise(SiteMadeAnnex(self.id))
 
     def activate(self) -> None:
         """``activer``: no-op when already active."""
         if self._active:
             return
-        self._active = True
-        self.touch()
-        self.record_event(SiteActivated(self.id))
+        self._raise(SiteActivated(self.id))
 
     def deactivate(self) -> None:
         """``desactiver``: no-op when already inactive. A principal site cannot
@@ -110,9 +114,35 @@ class Site(AggregateRoot[SiteId]):
                 f"Site {self._name!r} is the principal site: make another site principal first",
                 context=self.id.value,
             )
-        self._active = False
-        self.touch()
-        self.record_event(SiteDeactivated(self.id))
+        self._raise(SiteDeactivated(self.id))
+
+    def _apply(self, event) -> None:
+        match event:
+            case SiteCreated():
+                self._directory_id = event.directory_id
+                self._name = event.name
+                self._location = event.location
+                self._kind = event.kind
+                self._address = event.address
+                self._active = True
+            case SiteActivated():
+                self._active = True
+            case SiteDeactivated():
+                self._active = False
+            case SiteMadePrincipal():
+                self._kind = SiteKind.PRINCIPAL
+            case SiteMadeAnnex():
+                self._kind = SiteKind.ANNEX
+            case SiteImported():
+                self._directory_id = event.directory_id
+                self._name = event.name
+                self._location = event.location
+                self._kind = event.kind
+                self._address = event.address
+                self._active = event.active
+                self._created_at = event.created_at
+            case _:
+                super()._apply(event)
 
     @property
     def directory_id(self) -> DirectoryId:

@@ -1,4 +1,6 @@
+from collections.abc import Iterable
 from datetime import datetime
+from typing import Self
 
 from ..events import BaseEvent
 from .base_entity import Entity
@@ -22,9 +24,16 @@ class AggregateRoot[T](Entity[T]):
     :meth:`_advance_version`, so the in-memory aggregate carries the stored
     version and a second save in the same request stays consistent.
 
-    This is event *recording* (for dispatch / outbox), not event sourcing. If
-    you later need event sourcing, add a separate replay/``apply`` mechanism
-    deliberately — do not conflate the two here.
+    Event sourcing: the aggregate's state is the replay of its events.
+
+    * Domain methods validate, then call :meth:`_raise` with an event that
+      carries everything the change needs (including "now" and generated
+      ids). ``_raise`` applies the event to the state and records it.
+    * Each aggregate implements ``_apply(event)``: a pure state transition,
+      with no validation, no clock and no I/O, so replaying the stored
+      events always rebuilds the same state.
+    * :meth:`rehydrate` rebuilds an aggregate from its stored events; the
+      version is the number of events in its stream.
     """
 
     __slots__ = ("_domain_events", "_version")
@@ -46,15 +55,53 @@ class AggregateRoot[T](Entity[T]):
         """Persistence stamp of the last durable write (``0`` = never saved)."""
         return self._version
 
-    def _advance_version(self) -> None:
+    def _advance_version(self, count: int = 1) -> None:
         """Repository hook: bump the stamp after a successful save.
 
-        The stored row's version is always ``version + 1`` at save time, so
-        the bump is identical for inserts and updates. Only repositories (and
-        their test doubles) call this — domain code never versions aggregates
-        itself.
+        A state-table save bumps by one (the stored row's version is always
+        ``version + 1``); an event-store save bumps by the number of events
+        appended. Only repositories (and their test doubles) call this —
+        domain code never versions aggregates itself.
         """
-        self._version += 1
+        self._version += count
+
+    # ---- event sourcing ----
+
+    @classmethod
+    def rehydrate(cls, aggregate_id: T, events: Iterable[BaseEvent]) -> Self:
+        """Rebuild an aggregate by replaying its stored events, oldest first.
+
+        With no events, returns a blank aggregate (version ``0``) whose first
+        applied event creates it.
+        """
+        aggregate = cls.__new__(cls)
+        AggregateRoot.__init__(aggregate, aggregate_id)
+        for event in events:
+            aggregate.apply(event)
+            aggregate._version += 1
+        return aggregate
+
+    def apply(self, event: BaseEvent) -> None:
+        """Apply one event to the state, without recording it.
+
+        Used by replay (:meth:`rehydrate`) and by read-model projections. The
+        event's timestamp becomes ``updated_at`` (and ``created_at`` for the
+        aggregate's first event); ``_apply`` may override both, e.g. for an
+        import event that carries the original dates.
+        """
+        if self._version == 0 and not self._domain_events:
+            self._created_at = event.occurred_at
+        self._updated_at = event.occurred_at
+        self._apply(event)
+
+    def _raise(self, event: BaseEvent) -> None:
+        """Domain-method helper: apply the change, then record it."""
+        self.apply(event)
+        self.record_event(event)
+
+    def _apply(self, event: BaseEvent) -> None:
+        """State transition for one event — implemented by each aggregate."""
+        raise NotImplementedError(f"{type(self).__name__} cannot apply {type(event).__name__}")
 
     @property
     def domain_events(self) -> tuple[BaseEvent, ...]:

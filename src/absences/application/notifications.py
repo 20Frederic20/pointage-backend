@@ -11,7 +11,14 @@ from cqrs.events.event import DCNotificationEvent
 
 from core.domain.events import BaseEvent
 
-from ..domain.events import AbsenceApproved, AbsenceDeclared, AbsenceRejected
+from ..domain.events import (
+    AbsenceApproved,
+    AbsenceDeclared,
+    AbsenceImported,
+    AbsenceRejected,
+    AbsenceTypeCreated,
+    AbsenceTypeImported,
+)
 
 ABSENCES_TOPIC = "absences"
 
@@ -74,6 +81,11 @@ ABSENCES_EVENT_MAPPERS: dict[type, object] = {
     AbsenceDeclared: to_absence_declared,
     AbsenceApproved: to_absence_approved,
     AbsenceRejected: to_absence_rejected,
+    # Reference data: stored, never published (no subscriber needs it).
+    AbsenceTypeCreated: None,
+    # Takeover of the state tables: stored, never published.
+    AbsenceImported: None,
+    AbsenceTypeImported: None,
 }
 
 ABSENCES_EVENT_REGISTRY: dict[str, type] = {

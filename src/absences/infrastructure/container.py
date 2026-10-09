@@ -5,14 +5,15 @@ from dataclasses import dataclass, field
 from cqrs.requests.map import RequestMap
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from adjustements.infrastructure.persistence.anomaly_repository import AnomalyRepository
+from adjustements.infrastructure.persistence.event_sourced_anomaly_repository import EventSourcedAnomalyRepository
 from core.application import ApplicationMediator, HandlerContainer, IUnitOfWork
 from core.domain.events import BaseEvent, IEventBus
 from core.infrastructure.database import SQLAlchemyUnitOfWork
+from core.infrastructure.event_store import EventStore
 from core.infrastructure.events import EventBusEmitter
 from core.infrastructure.outbox import TransactionalOutbox
-from identity.infrastructure.persistence.employee_repository import EmployeeRepository
-from punch.infrastructure.persistence.time_entry_repository import TimeEntryRepository
+from identity.infrastructure.persistence.event_sourced_employee_repository import EventSourcedEmployeeRepository
+from punch.infrastructure.persistence.event_sourced_time_entry_repository import EventSourcedTimeEntryRepository
 
 from ..application import (
     ApproveAbsenceCommand,
@@ -32,18 +33,24 @@ from ..application.handlers import (
 )
 from ..application.notifications import ABSENCES_EVENT_MAPPERS
 from .persistence.absence_repository import AbsenceRepository
-from .persistence.absence_type_repository import AbsenceTypeRepository
+from .persistence.event_sourced_absence_repository import EventSourcedAbsenceRepository
+from .persistence.event_sourced_absence_type_repository import EventSourcedAbsenceTypeRepository
 
 
 @dataclass
 class AbsencesContainer:
-    """Request-scope wiring for the absences bounded context."""
+    """Request-scope wiring for the absences bounded context.
 
-    absence_repository: AbsenceRepository
-    absence_type_repository: AbsenceTypeRepository
-    employee_repository: EmployeeRepository
-    anomaly_repository: AnomalyRepository
-    time_entry_repository: TimeEntryRepository
+    Commands load and save aggregates through the event store (write
+    database); queries read the read models (read database).
+    """
+
+    absence_repository: EventSourcedAbsenceRepository
+    absence_type_repository: EventSourcedAbsenceTypeRepository
+    employee_repository: EventSourcedEmployeeRepository
+    anomaly_repository: EventSourcedAnomalyRepository
+    time_entry_repository: EventSourcedTimeEntryRepository
+    absence_read_repository: AbsenceRepository
     unit_of_work: IUnitOfWork
     event_bus: IEventBus[BaseEvent]
     event_outbox: TransactionalOutbox | None = None
@@ -95,7 +102,7 @@ class AbsencesContainer:
                 event_outbox=self.event_outbox,
             )
         if handler_type is GetAbsenceByIdHandler:
-            return GetAbsenceByIdHandler(absence_repository=self.absence_repository)
+            return GetAbsenceByIdHandler(absence_repository=self.absence_read_repository)
         raise TypeError(
             f"No absences-scope wiring for handler {handler_type.__name__}"
         )
@@ -107,19 +114,22 @@ class AbsencesContainer:
 
 def build_absences_container(
     *,
-    session: AsyncSession,
+    write_session: AsyncSession,
+    read_session: AsyncSession,
     event_bus: IEventBus[BaseEvent],
     event_outbox: TransactionalOutbox | None = None,
 ) -> AbsencesContainer:
     """Build a request-scoped absences container."""
+    event_store = EventStore(write_session)
     return AbsencesContainer(
-        absence_repository=AbsenceRepository(session),
-        absence_type_repository=AbsenceTypeRepository(session),
-        employee_repository=EmployeeRepository(session),
-        anomaly_repository=AnomalyRepository(session),
-        time_entry_repository=TimeEntryRepository(session),
-        unit_of_work=SQLAlchemyUnitOfWork(session),
+        absence_repository=EventSourcedAbsenceRepository(event_store),
+        absence_type_repository=EventSourcedAbsenceTypeRepository(event_store),
+        employee_repository=EventSourcedEmployeeRepository(event_store),
+        anomaly_repository=EventSourcedAnomalyRepository(event_store),
+        time_entry_repository=EventSourcedTimeEntryRepository(event_store),
+        absence_read_repository=AbsenceRepository(read_session),
+        unit_of_work=SQLAlchemyUnitOfWork(write_session),
         event_bus=event_bus,
         event_outbox=event_outbox
-        or TransactionalOutbox(session=session, mappers=ABSENCES_EVENT_MAPPERS),
+        or TransactionalOutbox(session=write_session, mappers=ABSENCES_EVENT_MAPPERS),
     )

@@ -29,7 +29,7 @@ async def create_time_entry(
     dto = await time_entries.send(
         CreateTimeEntryCommand(
             user_id=principal.user_id,
-            location=Location(payload.longitude, payload.latitude),
+            location=Location(latitude=payload.latitude, longitude=payload.longitude),
             source=payload.source,
             idempotency_key=payload.idempotency_key,
             wifi_identifier=payload.wifi_identifier,

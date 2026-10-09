@@ -7,10 +7,14 @@ from core.domain.entity import AggregateRoot
 from core.domain.errors import NotFoundError
 from identity.domain import UserId
 from identity.domain.entities import Employee, Site
-from identity.domain.repositories import IEmployeeAssignmentRepository, IEmployeeRepository, ISiteRepository
+from identity.domain.repositories import (
+    IEmployeeAssignmentRepository,
+    IEmployeeRepository,
+    ISiteRepository,
+)
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
-from punch.domain import TimeEntryId, LocationConfidence
+from punch.domain import LocationConfidence, TimeEntryId
 from punch.domain.entities import TimeEntry
 from punch.domain.errors import EmployeeNotAssignedError, TooFarFromWorkplaceError
 from punch.domain.repositories import ITimeEntryRepository

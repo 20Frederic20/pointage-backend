@@ -5,7 +5,15 @@ from typing import Self
 
 from core.domain.entity import AggregateRoot
 
-from ..events import UserDeactivated, UserRegistered, UserRoleChanged
+from ..events.user_events import (
+    UserActivityRecorded,
+    UserDeactivated,
+    UserImported,
+    UserPasswordCleared,
+    UserProfileUpdated,
+    UserRegistered,
+    UserRoleChanged,
+)
 from ..value_objects.ids import UserId
 from ..value_objects.role import Role
 
@@ -78,15 +86,17 @@ class User(AggregateRoot[UserId]):
         """
         Founding signup: the first user of a brand-new workspace, an ADMIN.
         """
-        user = cls(
-            user_id,
-            email=email,
-            password_hash=password_hash,
-            role=role,
-            first_name=first_name,
-            last_name=last_name,
+        user = cls.rehydrate(user_id, [])
+        user._raise(
+            UserRegistered(
+                user_id,
+                email=email.strip().lower(),
+                password_hash=password_hash,
+                role=role,
+                first_name=first_name,
+                last_name=last_name,
+            )
         )
-        user.record_event(UserRegistered(user_id))
         return user
 
     # ---- state changes ----
@@ -98,11 +108,7 @@ class User(AggregateRoot[UserId]):
         """
         old_role = self._role
         if new_role is not old_role:
-            self._role = new_role
-            self.touch()
-            self.record_event(
-                UserRoleChanged(self.id, old_role=old_role, new_role=new_role)
-            )
+            self._raise(UserRoleChanged(self.id, old_role=old_role, new_role=new_role))
         return old_role
 
     def deactivate(self) -> None:
@@ -111,9 +117,7 @@ class User(AggregateRoot[UserId]):
         """
         if not self._is_active:
             return
-        self._is_active = False
-        self.touch()
-        self.record_event(UserDeactivated(self.id))
+        self._raise(UserDeactivated(self.id))
 
     def update_profile(
         self,
@@ -124,14 +128,17 @@ class User(AggregateRoot[UserId]):
     ) -> None:
         """
         Apply only the fields the caller actually sent (``None`` = untouched).
+        Nothing changed: nothing recorded.
         """
-        if first_name is not None:
-            self._first_name = first_name
-        if last_name is not None:
-            self._last_name = last_name
-        if avatar_url is not None:
-            self._avatar_url = avatar_url
-        self.touch()
+        event = UserProfileUpdated(
+            self.id,
+            first_name=first_name if first_name is not None else self._first_name,
+            last_name=last_name if last_name is not None else self._last_name,
+            avatar_url=avatar_url if avatar_url is not None else self._avatar_url,
+        )
+        if (event.first_name, event.last_name, event.avatar_url) == (self._first_name, self._last_name, self._avatar_url):
+            return
+        self._raise(event)
 
     def clear_password(self) -> None:
         """
@@ -140,15 +147,51 @@ class User(AggregateRoot[UserId]):
         """
         if self._password_hash is None:
             return
-        self._password_hash = None
-        self.touch()
+        self._raise(UserPasswordCleared(self.id))
 
     def record_activity(self) -> None:
         """
         Best-effort presence telemetry (auth calls it on each login/refresh).
         """
-        self._last_active_at = _utcnow()
-        self.touch()
+        self._raise(UserActivityRecorded(self.id, last_active_at=_utcnow()))
+
+    # ---- event sourcing ----
+
+    def _apply(self, event) -> None:
+        match event:
+            case UserRegistered():
+                self._email = event.email
+                self._password_hash = event.password_hash
+                self._role = event.role
+                self._first_name = event.first_name
+                self._last_name = event.last_name
+                self._avatar_url = None
+                self._is_active = True
+                self._last_active_at = None
+            case UserRoleChanged():
+                self._role = event.new_role
+            case UserDeactivated():
+                self._is_active = False
+            case UserProfileUpdated():
+                self._first_name = event.first_name
+                self._last_name = event.last_name
+                self._avatar_url = event.avatar_url
+            case UserPasswordCleared():
+                self._password_hash = None
+            case UserActivityRecorded():
+                self._last_active_at = event.last_active_at
+            case UserImported():
+                self._email = event.email
+                self._password_hash = event.password_hash
+                self._role = event.role
+                self._first_name = event.first_name
+                self._last_name = event.last_name
+                self._avatar_url = event.avatar_url
+                self._is_active = event.is_active
+                self._last_active_at = event.last_active_at
+                self._created_at = event.created_at
+            case _:
+                super()._apply(event)
 
     # ---- read side ----
 

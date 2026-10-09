@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from ..events.anomaly_events import AnomalyCreated
+from ..events.anomaly_events import AnomalyCreated, AnomalyImported, AnomalyResolved
 from ..value_objects import AnomalyId, AnomalyStatus, AnomalyType, Severity
 from core.domain.entity import AggregateRoot
 from core.domain.errors import ConflictError
@@ -77,31 +77,47 @@ class Anomaly(AggregateRoot[AnomalyId]):
         """
         Factory for a brand-new anomaly.
         """
-        anomaly = cls(
-            anomaly_id,
-            time_entry_id=time_entry_id,
-            type=type,
-            severity=severity,
-            status=status,
-            detected_at=detected_at,
-            resolved_at=resolved_at,
-            description=description
+        anomaly = cls.rehydrate(anomaly_id, [])
+        anomaly._raise(
+            AnomalyCreated(
+                anomaly_id,
+                time_entry_id=time_entry_id,
+                type=type,
+                severity=severity,
+                status=status,
+                detected_at=detected_at,
+                resolved_at=resolved_at,
+                description=description,
+            )
         )
-        anomaly.record_event(AnomalyCreated(anomaly_id))
         return anomaly
 
-
-
     def resolve(self, *, resolved_at: datetime) -> None:
-        """``resoudre``: close an open anomaly."""
+        """``resoudre``: close an open anomaly; records :class:`AnomalyResolved`."""
         if self._status in (AnomalyStatus.RESOLVED, AnomalyStatus.CANCELLED):
             raise ConflictError(
                 f"Anomaly {self.id.value} is already {self._status}",
                 context=self.id.value,
             )
-        self._status = AnomalyStatus.RESOLVED
-        self._resolved_at = resolved_at
-        self.touch()
+        self._raise(AnomalyResolved(self.id, resolved_at=resolved_at))
+
+    def _apply(self, event) -> None:
+        match event:
+            case AnomalyCreated() | AnomalyImported():
+                self._time_entry_id = event.time_entry_id
+                self._type = event.type
+                self._severity = event.severity
+                self._status = event.status
+                self._detected_at = event.detected_at
+                self._resolved_at = event.resolved_at
+                self._description = event.description
+                if isinstance(event, AnomalyImported):
+                    self._created_at = event.created_at
+            case AnomalyResolved():
+                self._status = AnomalyStatus.RESOLVED
+                self._resolved_at = event.resolved_at
+            case _:
+                super()._apply(event)
 
     @property
     def type(self) -> AnomalyType:

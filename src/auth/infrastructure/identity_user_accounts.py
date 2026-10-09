@@ -1,9 +1,13 @@
 """Adapter for the :class:`UserAccounts` port, over identity's public API.
 
 Auth only sends identity's own queries and commands through its container;
-it never reads the ``users`` table. Each call opens its own session, so
-identity's unit of work (``RecordUserActivityCommand`` commits) can never
-commit or roll back auth's transaction.
+it never reads the ``users`` table. Each call opens its own sessions (write:
+event store, read: read models), so identity's unit of work
+(``RecordUserActivityCommand`` commits) can never commit or roll back auth's
+transaction.
+
+Lookups go through identity's queries, i.e. the read models: an account
+created a moment ago can log in once the projection has caught up (~0.2 s).
 """
 
 import logging
@@ -31,17 +35,20 @@ class IdentityUserAccounts(UserAccounts):
         self,
         *,
         session_factory: async_sessionmaker[AsyncSession],
+        read_session_factory: async_sessionmaker[AsyncSession],
         event_bus: IEventBus[BaseEvent],
         password_hasher: PasswordHasher,
     ) -> None:
         self._session_factory = session_factory
+        self._read_session_factory = read_session_factory
         self._event_bus = event_bus
         self._password_hasher = password_hasher
 
     async def _send(self, request):
-        async with self._session_factory() as session:
+        async with self._session_factory() as write_session, self._read_session_factory() as read_session:
             users = build_users_container(
-                session=session,
+                write_session=write_session,
+                read_session=read_session,
                 event_bus=self._event_bus,
                 password_hasher=self._password_hasher,
             )

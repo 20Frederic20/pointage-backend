@@ -15,10 +15,11 @@ from ...domain.repositories import (
     IEmployeeAssignmentRepository,
     IEmployeeRepository,
     ISiteRepository,
+    IUserRepository,
 )
 from ..commands import CreateEmployeeCommand
-from ..services import AssignmentSiteService
 from ..dtos import EmployeeDTO
+from ..services import AssignmentSiteService
 
 
 class CreateEmployeeHandler(
@@ -28,6 +29,7 @@ class CreateEmployeeHandler(
         self,
         *,
         unit_of_work: IUnitOfWork,
+        user_repository: IUserRepository,
         employee_repository: IEmployeeRepository,
         employee_assignment_repository: IEmployeeAssignmentRepository,
         directory_repository: IDirectoryRepository,
@@ -35,6 +37,7 @@ class CreateEmployeeHandler(
         event_outbox: IEventOutbox | None = None,
     ) -> None:
         super().__init__(unit_of_work=unit_of_work, event_outbox=event_outbox)
+        self._users = user_repository
         self._employees = employee_repository
         self._assignments = employee_assignment_repository
         self._directories = directory_repository
@@ -48,13 +51,16 @@ class CreateEmployeeHandler(
                 f"An employee with number {request.employee_number!r} already exists",
                 context=request.employee_number,
             )
+        # The account must exist (NotFoundError otherwise): the event store has
+        # no foreign keys, so nothing else would refuse an unknown user.
+        user = await self._users.get_by_id(UserId(request.user_id))
         directory = await self._directories.get_by_id(DirectoryId(request.directory_id))
         site = await self._assignment_sites.resolve(directory, request.site_id)
 
         employee = Employee.create(
             employee_id=EmployeeId.generate(),
             employee_number=request.employee_number,
-            user_id=UserId(request.user_id),
+            user_id=user.id,
             phone=request.phone,
             role=Role(request.role),
             is_active=request.is_active if request.is_active else False,

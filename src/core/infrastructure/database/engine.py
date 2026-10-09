@@ -6,13 +6,22 @@ from core.settings import DatabaseSettings
 
 
 def build_engine(settings: DatabaseSettings, *, echo: bool = False) -> AsyncEngine:
-    """Create the async engine from settings.
+    """Create the write-database engine from settings.
 
     Connection is lazy — nothing is opened here, so calling this never touches
     the database (and never fails on an unreachable DB).
     """
     return create_async_engine(
         settings.SQLALCHEMY_DATABASE_URI,
+        echo=echo,
+        pool_pre_ping=True,
+    )
+
+
+def build_read_engine(settings: DatabaseSettings, *, echo: bool = False) -> AsyncEngine:
+    """Create the read-database engine from settings (lazy, like :func:`build_engine`)."""
+    return create_async_engine(
+        settings.SQLALCHEMY_READ_DATABASE_URI,
         echo=echo,
         pool_pre_ping=True,
     )

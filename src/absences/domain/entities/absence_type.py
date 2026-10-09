@@ -2,6 +2,7 @@ from datetime import datetime
 
 from core.domain.entity import AggregateRoot
 
+from ..events import AbsenceTypeCreated, AbsenceTypeImported
 from ..value_objects import AbsenceTypeId
 
 
@@ -44,13 +45,32 @@ class AbsenceType(AggregateRoot[AbsenceTypeId]):
         counts_as_work_time: bool,
         deducts_balance: bool,
     ) -> "AbsenceType":
-        return cls(
-            absence_type_id,
-            name=name.strip(),
-            paid=paid,
-            counts_as_work_time=counts_as_work_time,
-            deducts_balance=deducts_balance,
+        absence_type = cls.rehydrate(absence_type_id, [])
+        absence_type._raise(
+            AbsenceTypeCreated(
+                absence_type_id,
+                name=name.strip(),
+                paid=paid,
+                counts_as_work_time=counts_as_work_time,
+                deducts_balance=deducts_balance,
+            )
         )
+        return absence_type
+
+    def _apply(self, event) -> None:
+        match event:
+            case AbsenceTypeCreated() | AbsenceTypeImported():
+                self._name = event.name
+                self._paid = event.paid
+                self._counts_as_work_time = event.counts_as_work_time
+                self._deducts_balance = event.deducts_balance
+                if isinstance(event, AbsenceTypeImported):
+                    self._active = event.active
+                    self._created_at = event.created_at
+                else:
+                    self._active = True
+            case _:
+                super()._apply(event)
 
     @property
     def name(self) -> str:

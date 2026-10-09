@@ -3,8 +3,35 @@ from datetime import date, datetime, timedelta
 from core.domain.entity import AggregateRoot
 
 from ..errors import InvalidCalculationRuleVersionError
-from ..events import CalculationRuleVersionCreated
+from ..events import CalculationRuleVersionClosed, CalculationRuleVersionCreated, CalculationRuleVersionImported
 from ..value_objects import CalculationRuleVersionId
+
+
+def _check(
+    calculation_rule_version_id: CalculationRuleVersionId,
+    *,
+    effective_from: date,
+    effective_to: date | None,
+    min_break_duration: timedelta,
+    break_threshold: timedelta,
+    max_daily_work_duration: timedelta,
+    max_amplitude: timedelta,
+) -> None:
+    if min(min_break_duration, break_threshold) < timedelta(0):
+        raise InvalidCalculationRuleVersionError(
+            "Break duration and break threshold cannot be negative",
+            context=calculation_rule_version_id.value,
+        )
+    if min(max_daily_work_duration, max_amplitude) <= timedelta(0):
+        raise InvalidCalculationRuleVersionError(
+            "Maximum daily work duration and maximum amplitude must be positive",
+            context=calculation_rule_version_id.value,
+        )
+    if effective_to is not None and effective_to < effective_from:
+        raise InvalidCalculationRuleVersionError(
+            f"Rule version ends ({effective_to}) before it starts ({effective_from})",
+            context=calculation_rule_version_id.value,
+        )
 
 
 class CalculationRuleVersion(AggregateRoot[CalculationRuleVersionId]):
@@ -42,21 +69,15 @@ class CalculationRuleVersion(AggregateRoot[CalculationRuleVersionId]):
         version: int = 0,
     ) -> None:
         super().__init__(calculation_rule_version_id, created_at=created_at, updated_at=updated_at, version=version)
-        if min(min_break_duration, break_threshold) < timedelta(0):
-            raise InvalidCalculationRuleVersionError(
-                "Break duration and break threshold cannot be negative",
-                context=calculation_rule_version_id.value,
-            )
-        if min(max_daily_work_duration, max_amplitude) <= timedelta(0):
-            raise InvalidCalculationRuleVersionError(
-                "Maximum daily work duration and maximum amplitude must be positive",
-                context=calculation_rule_version_id.value,
-            )
-        if effective_to is not None and effective_to < effective_from:
-            raise InvalidCalculationRuleVersionError(
-                f"Rule version ends ({effective_to}) before it starts ({effective_from})",
-                context=calculation_rule_version_id.value,
-            )
+        _check(
+            calculation_rule_version_id,
+            effective_from=effective_from,
+            effective_to=effective_to,
+            min_break_duration=min_break_duration,
+            break_threshold=break_threshold,
+            max_daily_work_duration=max_daily_work_duration,
+            max_amplitude=max_amplitude,
+        )
         self._rule_version = rule_version
         self._effective_from = effective_from
         self._effective_to = effective_to
@@ -86,9 +107,8 @@ class CalculationRuleVersion(AggregateRoot[CalculationRuleVersionId]):
                 )
             if previous.effective_to is None or previous.effective_to >= effective_from:
                 previous.close(effective_from - timedelta(days=1))
-        rule_version = cls(
+        _check(
             calculation_rule_version_id,
-            rule_version=previous.rule_version + 1 if previous is not None else 1,
             effective_from=effective_from,
             effective_to=None,
             min_break_duration=min_break_duration,
@@ -96,7 +116,19 @@ class CalculationRuleVersion(AggregateRoot[CalculationRuleVersionId]):
             max_daily_work_duration=max_daily_work_duration,
             max_amplitude=max_amplitude,
         )
-        rule_version.record_event(CalculationRuleVersionCreated(calculation_rule_version_id))
+        rule_version = cls.rehydrate(calculation_rule_version_id, [])
+        rule_version._raise(
+            CalculationRuleVersionCreated(
+                calculation_rule_version_id,
+                rule_version=previous.rule_version + 1 if previous is not None else 1,
+                effective_from=effective_from,
+                effective_to=None,
+                min_break_duration=min_break_duration,
+                break_threshold=break_threshold,
+                max_daily_work_duration=max_daily_work_duration,
+                max_amplitude=max_amplitude,
+            )
+        )
         return rule_version
 
     def is_applicable(self, day: date) -> bool:
@@ -109,8 +141,24 @@ class CalculationRuleVersion(AggregateRoot[CalculationRuleVersionId]):
                 f"Rule version cannot end ({last_day}) before it starts ({self._effective_from})",
                 context=self.id.value,
             )
-        self._effective_to = last_day
-        self.touch()
+        self._raise(CalculationRuleVersionClosed(self.id, effective_to=last_day))
+
+    def _apply(self, event) -> None:
+        match event:
+            case CalculationRuleVersionCreated() | CalculationRuleVersionImported():
+                self._rule_version = event.rule_version
+                self._effective_from = event.effective_from
+                self._effective_to = event.effective_to
+                self._min_break_duration = event.min_break_duration
+                self._break_threshold = event.break_threshold
+                self._max_daily_work_duration = event.max_daily_work_duration
+                self._max_amplitude = event.max_amplitude
+                if isinstance(event, CalculationRuleVersionImported):
+                    self._created_at = event.created_at
+            case CalculationRuleVersionClosed():
+                self._effective_to = event.effective_to
+            case _:
+                super()._apply(event)
 
     @property
     def rule_version(self) -> int:

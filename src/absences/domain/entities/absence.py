@@ -11,7 +11,7 @@ from ..errors import (
     AnomalyNotCoveredByAbsenceError,
     InvalidAbsencePeriodError,
 )
-from ..events import AbsenceApproved, AbsenceDeclared, AbsenceRejected
+from ..events import AbsenceApproved, AbsenceDeclared, AbsenceImported, AbsenceRejected
 from ..value_objects import AbsenceId, AbsenceStatus, AbsenceTypeId
 from .absence_type import AbsenceType
 
@@ -79,17 +79,40 @@ class Absence(AggregateRoot[AbsenceId]):
                 f"Absence type {absence_type.name!r} is no longer active",
                 context=absence_type.id.value,
             )
-        absence = cls(
-            absence_id,
-            employee_id=employee_id,
-            absence_type_id=absence_type.id,
-            start_at=start_at,
-            end_at=end_at,
-            reason=reason,
-            justification_reference=justification_reference,
+        absence = cls.rehydrate(absence_id, [])
+        absence._raise(
+            AbsenceDeclared(
+                absence_id,
+                employee_id=employee_id,
+                absence_type_id=absence_type.id,
+                start_at=start_at,
+                end_at=end_at,
+                reason=reason,
+                justification_reference=justification_reference,
+            )
         )
-        absence.record_event(AbsenceDeclared(absence_id))
         return absence
+
+    def _apply(self, event) -> None:
+        match event:
+            case AbsenceDeclared() | AbsenceImported():
+                self._employee_id = event.employee_id
+                self._absence_type_id = event.absence_type_id
+                self._start_at = event.start_at
+                self._end_at = event.end_at
+                self._reason = event.reason
+                self._justification_reference = event.justification_reference
+                if isinstance(event, AbsenceImported):
+                    self._status = event.status
+                    self._created_at = event.created_at
+                else:
+                    self._status = AbsenceStatus.PENDING
+            case AbsenceApproved():
+                self._status = AbsenceStatus.APPROVED
+            case AbsenceRejected():
+                self._status = AbsenceStatus.REJECTED
+            case _:
+                super()._apply(event)
 
     # ---- behaviour ----------------------------------------------------------
 
@@ -103,13 +126,13 @@ class Absence(AggregateRoot[AbsenceId]):
 
     def approve(self) -> None:
         """``valider``."""
-        self._decide(AbsenceStatus.APPROVED)
-        self.record_event(AbsenceApproved(self.id))
+        self._ensure_pending()
+        self._raise(AbsenceApproved(self.id))
 
     def reject(self) -> None:
         """``refuser``."""
-        self._decide(AbsenceStatus.REJECTED)
-        self.record_event(AbsenceRejected(self.id))
+        self._ensure_pending()
+        self._raise(AbsenceRejected(self.id))
 
     def neutralize_anomaly(self, anomaly: "Anomaly", *, anomaly_employee_id: EmployeeId) -> None:
         """``neutraliserAnomalie``: an approved absence resolves an anomaly of the
@@ -124,16 +147,15 @@ class Absence(AggregateRoot[AbsenceId]):
                 "The anomaly belongs to another employee or falls outside the absence",
                 context=anomaly.id.value,
             )
+        # The absence itself does not change: only the anomaly records an event.
         anomaly.resolve(resolved_at=datetime.now(UTC))
 
-    def _decide(self, status: AbsenceStatus) -> None:
+    def _ensure_pending(self) -> None:
         if self._status != AbsenceStatus.PENDING:
             raise AbsenceNotPendingError(
                 f"Absence is already {self._status.value}",
                 context=self.id.value,
             )
-        self._status = status
-        self.touch()
 
     # ---- state ----------------------------------------------------------------
 

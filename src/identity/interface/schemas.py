@@ -26,8 +26,8 @@ class RegisterRequest(_CamelSchema):
     email: EmailStr
     # Omitted: the account logs in with a code sent by email.
     password: str | None = Field(default=None, min_length=8)
-    first_name: str | None = None
-    last_name: str | None = None
+    first_name: str | None = Field(default=None, max_length=255)
+    last_name: str | None = Field(default=None, max_length=255)
     directory_name: str | None = Field(default=None, alias="directoryName")
     # Ignored for the founding account (always ADMIN); EMPLOYEE when omitted.
     role: Role | None = None
@@ -38,9 +38,9 @@ class CreateEmployeeRequest(_CamelSchema):
     user_id: str
     directory_id: str
     role: Role = Field(default=Role.EMPLOYEE)
-    employee_number: str = Field(min_length=10)
+    employee_number: str = Field(min_length=10, max_length=20)
     is_active: bool = Field(default=False)
-    phone: str | None = Field(default=None, min_length=10)
+    phone: str | None = Field(default=None, min_length=10, max_length=20)
     # First day of the initial assignment to ``directory_id``; today when omitted.
     assignment_start_date: date | None = None
     # Site of the initial assignment; the directory's principal site when omitted.
@@ -63,20 +63,20 @@ class ChangeRoleRequest(_CamelSchema):
 
 
 class UpdateProfileRequest(_CamelSchema):
-    first_name: str | None = None
-    last_name: str | None = None
-    avatar_url: str | None = Field(default=None, alias="avatarUrl")
+    first_name: str | None = Field(default=None, max_length=255)
+    last_name: str | None = Field(default=None, max_length=255)
+    avatar_url: str | None = Field(default=None, alias="avatarUrl", max_length=512)
 
 
 class UpdateEmployeeRequest(_CamelSchema):
 
-    employee_number: str | None = Field(default=None, min_length=10)
-    phone: str | None = Field(default=None, min_length=10)
+    employee_number: str | None = Field(default=None, min_length=10, max_length=20)
+    phone: str | None = Field(default=None, min_length=10, max_length=20)
 
 
 class CreateDirectoryRequest(_CamelSchema):
-    code: str
-    name: str
+    code: str = Field(min_length=1, max_length=255)
+    name: str = Field(min_length=1, max_length=255)
     parent_directory_id: str | None = None
 
 
@@ -102,7 +102,7 @@ class EndEmployeeAssignmentRequest(_CamelSchema):
 
 
 class UpdateDirectoryRequest(_CamelSchema):
-    name: str = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=255)
 
 
 # ---- responses -------------------------------------------------------------

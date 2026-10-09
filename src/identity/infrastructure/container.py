@@ -1,8 +1,9 @@
 """The users context's composition root — request-scope wiring.
 
-One container per request: repositories and the unit of work share one
-``AsyncSession``, and the resolver builds handler instances bound to that
-scope. This is the architecture-sanctioned manual DI (no framework) — see
+One container per request. Command handlers get the event-sourced
+repositories over the write session (event store, unit of work and outbox
+share it); query handlers get the read-model repositories over the read
+session. The resolver builds handler instances bound to that scope. This is the architecture-sanctioned manual DI (no framework) — see
 ``social_crm_ddd_architecture.md``.
 """
 
@@ -18,6 +19,7 @@ from core.application import (
 )
 from core.domain.events import BaseEvent, IEventBus
 from core.infrastructure.database import SQLAlchemyUnitOfWork
+from core.infrastructure.event_store import EventStore
 from core.infrastructure.events import EventBusEmitter
 from core.infrastructure.outbox import TransactionalOutbox
 from identity.application.commands.create_directory import CreateDirectoryCommand
@@ -72,19 +74,33 @@ from ..application import (
 from ..application.ports import PasswordHasher
 from .persistence.directory_repository import DirectoryRepository
 from .persistence.employee_assignment_repository import EmployeeAssignmentRepository
+from .persistence.event_sourced_directory_repository import EventSourcedDirectoryRepository
+from .persistence.event_sourced_employee_assignment_repository import EventSourcedEmployeeAssignmentRepository
+from .persistence.event_sourced_employee_repository import EventSourcedEmployeeRepository
+from .persistence.event_sourced_site_repository import EventSourcedSiteRepository
+from .persistence.event_sourced_user_repository import EventSourcedUserRepository
 from .persistence.site_repository import SiteRepository
 from .persistence.user_repository import UserRepository
 
 
 @dataclass
 class UsersContainer:
-    """Request-scope wiring for the users bounded context."""
+    """Request-scope wiring for the users bounded context.
 
-    user_repository: UserRepository
-    directory_repository: DirectoryRepository
-    employee_repository: EmployeeRepository
-    site_repository: SiteRepository
-    employee_assignment_repository: EmployeeAssignmentRepository
+    ``*_repository``: event store (commands); ``*_read_repository``: read
+    models (queries).
+    """
+
+    user_repository: EventSourcedUserRepository
+    directory_repository: EventSourcedDirectoryRepository
+    employee_repository: EventSourcedEmployeeRepository
+    site_repository: EventSourcedSiteRepository
+    employee_assignment_repository: EventSourcedEmployeeAssignmentRepository
+    user_read_repository: UserRepository
+    directory_read_repository: DirectoryRepository
+    employee_read_repository: EmployeeRepository
+    site_read_repository: SiteRepository
+    employee_assignment_read_repository: EmployeeAssignmentRepository
     unit_of_work: IUnitOfWork
     event_bus: IEventBus[BaseEvent]
     password_hasher: PasswordHasher
@@ -150,6 +166,7 @@ class UsersContainer:
         if handler_type is CreateEmployeeHandler:
             return CreateEmployeeHandler(
                 unit_of_work=self.unit_of_work,
+                user_repository=self.user_repository,
                 employee_repository=self.employee_repository,
                 employee_assignment_repository=self.employee_assignment_repository,
                 directory_repository=self.directory_repository,
@@ -185,28 +202,28 @@ class UsersContainer:
                 event_outbox=self.event_outbox,
             )
         if handler_type is GetUserByEmailHandler:
-            return GetUserByEmailHandler(user_repository=self.user_repository)
+            return GetUserByEmailHandler(user_repository=self.user_read_repository)
         if handler_type is GetUserByIdHandler:
-            return GetUserByIdHandler(user_repository=self.user_repository)
+            return GetUserByIdHandler(user_repository=self.user_read_repository)
         if handler_type is GetUsersHandler:
-            return GetUsersHandler(user_repository=self.user_repository)
+            return GetUsersHandler(user_repository=self.user_read_repository)
         if handler_type is GetDirectoryByIdHandler:
             return GetDirectoryByIdHandler(
-                directory_repository=self.directory_repository
+                directory_repository=self.directory_read_repository
             )
         if handler_type is GetSiteByIdHandler:
-            return GetSiteByIdHandler(site_repository=self.site_repository)
+            return GetSiteByIdHandler(site_repository=self.site_read_repository)
         if handler_type is GetDirectorySitesHandler:
             return GetDirectorySitesHandler(
-                site_repository=self.site_repository,
-                directory_repository=self.directory_repository,
+                site_repository=self.site_read_repository,
+                directory_repository=self.directory_read_repository,
             )
         if handler_type is GetEmployeeAssignmentsHandler:
             return GetEmployeeAssignmentsHandler(
-                employee_assignment_repository=self.employee_assignment_repository
+                employee_assignment_repository=self.employee_assignment_read_repository
             )
         if handler_type is GetEmployeeByEmployeeNumberHandler:
-            return GetEmployeeByEmployeeNumberHandler(employee_repository=self.employee_repository)
+            return GetEmployeeByEmployeeNumberHandler(employee_repository=self.employee_read_repository)
         raise TypeError(
             f"No users-scope wiring for handler {handler_type.__name__}"
         )
@@ -218,21 +235,28 @@ class UsersContainer:
 
 def build_users_container(
     *,
-    session: AsyncSession,
+    write_session: AsyncSession,
+    read_session: AsyncSession,
     event_bus: IEventBus[BaseEvent],
     password_hasher: PasswordHasher,
     event_outbox: TransactionalOutbox | None = None,
 ) -> UsersContainer:
-    """Wire the real adapters over one request-scoped session."""
+    """Wire the real adapters over the request-scoped write and read sessions."""
+    event_store = EventStore(write_session)
     return UsersContainer(
-        user_repository=UserRepository(session),
-        directory_repository=DirectoryRepository(session),
-        employee_repository=EmployeeRepository(session),
-        site_repository=SiteRepository(session),
-        employee_assignment_repository=EmployeeAssignmentRepository(session),
-        unit_of_work=SQLAlchemyUnitOfWork(session),
+        user_repository=EventSourcedUserRepository(event_store),
+        directory_repository=EventSourcedDirectoryRepository(event_store),
+        employee_repository=EventSourcedEmployeeRepository(event_store),
+        site_repository=EventSourcedSiteRepository(event_store),
+        employee_assignment_repository=EventSourcedEmployeeAssignmentRepository(event_store),
+        user_read_repository=UserRepository(read_session),
+        directory_read_repository=DirectoryRepository(read_session),
+        employee_read_repository=EmployeeRepository(read_session),
+        site_read_repository=SiteRepository(read_session),
+        employee_assignment_read_repository=EmployeeAssignmentRepository(read_session),
+        unit_of_work=SQLAlchemyUnitOfWork(write_session),
         event_bus=event_bus,
         password_hasher=password_hasher,
         event_outbox=event_outbox
-        or TransactionalOutbox(session=session, mappers=USERS_EVENT_MAPPERS),
+        or TransactionalOutbox(session=write_session, mappers=USERS_EVENT_MAPPERS),
     )

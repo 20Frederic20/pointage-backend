@@ -3,7 +3,7 @@ needs (planning, clockings, absences, anomalies, rules, period) and hands it to
 the ``DailyTimeResult`` aggregate. Shared by the day and period handlers; the
 handlers own the transaction and persistence."""
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from absences.domain.repositories import IAbsenceRepository
