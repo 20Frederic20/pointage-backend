@@ -11,6 +11,7 @@ from .make_site_principal import MakeSitePrincipalCommand
 from .record_user_activity import RecordUserActivityCommand
 from .register_user import RegisterUserCommand
 from .update_directory import UpdateDirectoryCommand
+from .update_employee import UpdateEmployeeCommand
 from .update_user_profile import UpdateUserProfileCommand
 
 __all__ = [
@@ -27,5 +28,6 @@ __all__ = [
     "RecordUserActivityCommand",
     "RegisterUserCommand",
     "UpdateDirectoryCommand",
+    "UpdateEmployeeCommand",
     "UpdateUserProfileCommand",
 ]

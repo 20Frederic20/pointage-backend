@@ -70,6 +70,8 @@ from ..application import (
     RecordUserActivityHandler,
     RegisterUserCommand,
     RegisterUserHandler,
+    UpdateEmployeeCommand,
+    UpdateEmployeeHandler,
     UpdateUserProfileCommand,
     UpdateUserProfileHandler,
 )
@@ -119,6 +121,7 @@ class UsersContainer:
         request_map = RequestMap()
         request_map.bind(CreateDirectoryCommand, CreateDirectoryHandler)
         request_map.bind(CreateEmployeeCommand, CreateEmployeeHandler)
+        request_map.bind(UpdateEmployeeCommand, UpdateEmployeeHandler)
         request_map.bind(CreateSiteCommand, CreateSiteHandler)
         request_map.bind(ActivateSiteCommand, ActivateSiteHandler)
         request_map.bind(DeactivateSiteCommand, DeactivateSiteHandler)
@@ -180,6 +183,12 @@ class UsersContainer:
                 employee_assignment_repository=self.employee_assignment_repository,
                 directory_repository=self.directory_repository,
                 site_repository=self.site_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is UpdateEmployeeHandler:
+            return UpdateEmployeeHandler(
+                unit_of_work=self.unit_of_work,
+                employee_repository=self.employee_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is GetEmployeesHandler:

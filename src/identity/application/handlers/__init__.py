@@ -17,6 +17,7 @@ from .get_users_handler import GetUsersHandler
 from .make_site_principal_handler import MakeSitePrincipalHandler
 from .record_user_activity_handler import RecordUserActivityHandler
 from .register_user_handler import RegisterUserHandler
+from .update_employee_handler import UpdateEmployeeHandler
 from .update_user_profile_handler import UpdateUserProfileHandler
 
 __all__ = [
@@ -39,5 +40,6 @@ __all__ = [
     "MakeSitePrincipalHandler",
     "RecordUserActivityHandler",
     "RegisterUserHandler",
+    "UpdateEmployeeHandler",
     "UpdateUserProfileHandler",
 ]
