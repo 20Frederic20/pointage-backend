@@ -2,10 +2,10 @@
 
 from core.domain.errors import NotFoundError
 from core.infrastructure.event_store import EventStore
+from identity.domain.repositories.employee_repository import IEmployeeWriteRepository
 
 from ...domain.entities import Employee
 from ...domain.events import EmployeeCreated, EmployeeImported, EmployeeUpdated
-from ...domain.repositories import IEmployeeRepository
 from ...domain.value_objects.ids import EmployeeId, UserId
 
 EMPLOYEE_STREAM = "identity.employee"
@@ -19,7 +19,7 @@ EMPLOYEE_EVENT_TYPES = {
 EMPLOYEE_NUMBER_KEY = "identity.employee.employee_number"
 
 
-class EventSourcedEmployeeRepository(IEmployeeRepository):
+class EventSourcedEmployeeRepository(IEmployeeWriteRepository):
     """An employee is the replay of its stream; the employee number is a unique key."""
 
     def __init__(self, event_store: EventStore) -> None:
@@ -36,10 +36,6 @@ class EventSourcedEmployeeRepository(IEmployeeRepository):
 
     async def exists_by_employee_number(self, employee_number: str) -> bool:
         return await self._store.owner(EMPLOYEE_NUMBER_KEY, employee_number) is not None
-
-    async def find_by_employee_number(self, employee_number: str) -> Employee | None:
-        owner = await self._store.owner(EMPLOYEE_NUMBER_KEY, employee_number)
-        return await self.get_by_id(EmployeeId(owner)) if owner is not None else None
 
     async def find_by_user_id(self, user_id: UserId) -> Employee | None:
         # employees.user_id is not unique: prefer the active, most recent record.

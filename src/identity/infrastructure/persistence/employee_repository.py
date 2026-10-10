@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,12 +8,12 @@ from core.domain.errors import ConflictError, NotFoundError
 from core.domain.specifications import Specification
 from identity.domain import EmployeeId, UserId
 from identity.domain.entities import Employee
-from identity.domain.repositories import IEmployeeRepository
+from identity.domain.repositories.employee_repository import IemployeeReadRepository
 from identity.infrastructure.persistence import EmployeeModel
 from identity.infrastructure.translators import EmployeesSpecificationTranslator
 
 
-class EmployeeRepository(IEmployeeRepository):
+class EmployeeRepository(IemployeeReadRepository):
 
     def __init__(
         self,
@@ -31,44 +31,24 @@ class EmployeeRepository(IEmployeeRepository):
             )
         return self._to_aggregate(row)
 
-    async def exists_by_employee_number(self, employee_number: str) -> bool:
-        row = await self._session.scalar(
-            select(EmployeeModel.id).where(EmployeeModel.employee_number == employee_number)
-        )
-        return row is not None
-
     async def find_by_employee_number(self, employee_number: str) -> Employee | None:
         row = await self._session.scalar(
             select(EmployeeModel).where(EmployeeModel.employee_number == employee_number)
         )
         return self._to_aggregate(row) if row is not None else None
 
-    async def find_by_user_id(self, user_id: UserId) -> Employee | None:
-        # employees.user_id is not unique in table.sql: prefer the active, most recent record.
-        row = await self._session.scalar(
-            select(EmployeeModel)
-            .where(EmployeeModel.user_id == user_id.value)
-            .order_by(EmployeeModel.is_active.desc(), EmployeeModel.created_at.desc())
-            .limit(1)
-        )
-        return self._to_aggregate(row) if row is not None else None
-
-    async def find(
-        self, spec: Specification[Employee], *, limit: int = 50, offset: int = 0
-    ) -> list[Employee]:
-        stmt = (
-            select(EmployeeModel)
-            .where(self._translator.translate(spec))
-            .limit(limit)
-            .offset(offset)
-        )
+    async def find(self, spec: Specification[Employee] | None, *, limit: int = 50, offset: int = 0) -> list[Employee]:
+        stmt = select(EmployeeModel)
+        if spec is not None:
+            stmt = stmt.where(self._translator.translate(spec))
+        stmt = stmt.order_by(EmployeeModel.created_at, EmployeeModel.id).limit(limit).offset(offset)
         rows = (await self._session.scalars(stmt)).all()
         return [self._to_aggregate(row) for row in rows]
 
-    async def count(self, spec: Specification[Employee]) -> int:
-        stmt = select(func.count()).select_from(EmployeeModel).where(
-            self._translator.translate(spec)
-        )
+    async def count(self, spec: Specification[Employee] | None) -> int:
+        stmt = select(func.count()).select_from(EmployeeModel)
+        if spec is not None:
+            stmt = stmt.where(self._translator.translate(spec))
         return await self._session.scalar(stmt) or 0
 
     async def count_active(self) -> int:
@@ -85,11 +65,6 @@ class EmployeeRepository(IEmployeeRepository):
         else:
             await self._update(employee)
         employee._advance_version()
-
-    async def delete(self, employee_id: EmployeeId) -> None:
-        await self._session.execute(
-            delete(EmployeeModel).where(EmployeeModel.id == employee_id.value)
-        )
 
     async def exists(self, employee_id: EmployeeId) -> bool:
         row = await self._session.scalar(

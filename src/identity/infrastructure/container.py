@@ -26,6 +26,7 @@ from identity.application.commands.create_directory import CreateDirectoryComman
 from identity.application.handlers.create_directory_handler import (
     CreateDirectoryHandler,
 )
+from identity.application.handlers.get_employees_handler import GetEmployeesHandler
 from identity.infrastructure.persistence.employee_repository import EmployeeRepository
 
 from ..application import (
@@ -54,6 +55,7 @@ from ..application import (
     GetEmployeeAssignmentsQuery,
     GetEmployeeByEmployeeNumberHandler,
     GetEmployeeByEmployeeNumberQuery,
+    GetEmployeesQuery,
     GetSiteByIdHandler,
     GetSiteByIdQuery,
     GetUserByEmailHandler,
@@ -74,9 +76,15 @@ from ..application import (
 from ..application.ports import PasswordHasher
 from .persistence.directory_repository import DirectoryRepository
 from .persistence.employee_assignment_repository import EmployeeAssignmentRepository
-from .persistence.event_sourced_directory_repository import EventSourcedDirectoryRepository
-from .persistence.event_sourced_employee_assignment_repository import EventSourcedEmployeeAssignmentRepository
-from .persistence.event_sourced_employee_repository import EventSourcedEmployeeRepository
+from .persistence.event_sourced_directory_repository import (
+    EventSourcedDirectoryRepository,
+)
+from .persistence.event_sourced_employee_assignment_repository import (
+    EventSourcedEmployeeAssignmentRepository,
+)
+from .persistence.event_sourced_employee_repository import (
+    EventSourcedEmployeeRepository,
+)
 from .persistence.event_sourced_site_repository import EventSourcedSiteRepository
 from .persistence.event_sourced_user_repository import EventSourcedUserRepository
 from .persistence.site_repository import SiteRepository
@@ -125,6 +133,7 @@ class UsersContainer:
         request_map.bind(GetUserByEmailQuery, GetUserByEmailHandler)
         request_map.bind(GetUserByIdQuery, GetUserByIdHandler)
         request_map.bind(GetUsersQuery, GetUsersHandler)
+        request_map.bind(GetEmployeesQuery, GetEmployeesHandler)
         request_map.bind(GetDirectoryByIdQuery, GetDirectoryByIdHandler)
         request_map.bind(GetSiteByIdQuery, GetSiteByIdHandler)
         request_map.bind(GetDirectorySitesQuery, GetDirectorySitesHandler)
@@ -172,6 +181,10 @@ class UsersContainer:
                 directory_repository=self.directory_repository,
                 site_repository=self.site_repository,
                 event_outbox=self.event_outbox,
+            )
+        if handler_type is GetEmployeesHandler:
+            return GetEmployeesHandler(
+                employee_repository=self.employee_read_repository
             )
         if handler_type is CreateSiteHandler:
             return CreateSiteHandler(

@@ -40,12 +40,12 @@ class EmployeesSpecificationTranslator(SqlAlchemySpecificationTranslator):
     __slots__ = ()
 
     def translate_leaf(self, spec: Specification) -> ColumnElement[bool]:
-        if isinstance(spec, UserEmailIs):
-            return UserModel.email == spec.email
-        if isinstance(spec, UserIsActiveIs):
-            return UserModel.is_active.is_(spec.expected)
-        if isinstance(spec, UserRoleIs):
-            return UserModel.role == spec.expected
+        if isinstance(spec, EmployeeEmployeeNumberIs):
+            return EmployeeModel.employee_number == spec.employee_number
+        if isinstance(spec, EmployeeIsActiveIs):
+            return EmployeeModel.is_active.is_(spec.expected)
+        if isinstance(spec, EmployeeRoleIs):
+            return EmployeeModel.role == spec.expected
         raise TypeError(
             f"Unknown leaf specification {type(spec).__name__} — add a branch"
         )
