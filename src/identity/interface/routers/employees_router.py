@@ -1,10 +1,11 @@
 """Workspace routes. ``GET/PATCH /employees/me`` joins this routers together
 with the auth context's guards in a later slice."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from identity.application import GetEmployeesQuery
+from identity.application import GetEmployeeByIdQuery, GetEmployeesQuery
 from identity.application.commands.create_employee import CreateEmployeeCommand
+from identity.domain import Role
 from identity.infrastructure import UsersContainer
 from identity.interface import UpdateEmployeeRequest
 from identity.interface.schemas import (
@@ -92,10 +93,22 @@ async def list_employees(
     page = await users.send(
         GetEmployeesQuery(
             employee_number=employee_number,
-            role=role,
+            # Wire enum → domain enum: the domain specs compare by identity.
+            role=Role(role) if role is not None else None,
             is_active=is_active,
             limit=limit,
             offset=offset,
         )
     )
     return _employee_list_response(page)
+
+
+@router.get("/{employee_id}", response_model=EmployeeResponse)
+async def get_employee(
+    employee_id: str,
+    users: UsersContainer = Depends(get_users),  # noqa: B008
+) -> EmployeeResponse:
+    dto = await users.send(GetEmployeeByIdQuery(employee_id=employee_id))
+    if dto is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+    return _employee_reponse(dto)

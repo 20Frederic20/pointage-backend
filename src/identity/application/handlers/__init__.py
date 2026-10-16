@@ -10,6 +10,7 @@ from .get_directory_by_id_handler import GetDirectoryByIdHandler
 from .get_directory_sites_handler import GetDirectorySitesHandler
 from .get_employee_assignments_handler import GetEmployeeAssignmentsHandler
 from .get_employee_by_employee_number_handler import GetEmployeeByEmployeeNumberHandler
+from .get_employee_by_id_handler import GetEmployeeByIdHandler
 from .get_site_by_id_handler import GetSiteByIdHandler
 from .get_user_by_email_handler import GetUserByEmailHandler
 from .get_user_by_id_handler import GetUserByIdHandler
@@ -33,6 +34,7 @@ __all__ = [
     "GetDirectorySitesHandler",
     "GetEmployeeAssignmentsHandler",
     "GetEmployeeByEmployeeNumberHandler",
+    "GetEmployeeByIdHandler",
     "GetSiteByIdHandler",
     "GetUserByEmailHandler",
     "GetUserByIdHandler",

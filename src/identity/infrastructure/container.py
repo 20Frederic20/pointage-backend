@@ -54,6 +54,8 @@ from ..application import (
     GetEmployeeAssignmentsHandler,
     GetEmployeeAssignmentsQuery,
     GetEmployeeByEmployeeNumberHandler,
+    GetEmployeeByIdHandler,
+    GetEmployeeByIdQuery,
     GetEmployeeByEmployeeNumberQuery,
     GetEmployeesQuery,
     GetSiteByIdHandler,
@@ -137,6 +139,7 @@ class UsersContainer:
         request_map.bind(GetUserByIdQuery, GetUserByIdHandler)
         request_map.bind(GetUsersQuery, GetUsersHandler)
         request_map.bind(GetEmployeesQuery, GetEmployeesHandler)
+        request_map.bind(GetEmployeeByIdQuery, GetEmployeeByIdHandler)
         request_map.bind(GetDirectoryByIdQuery, GetDirectoryByIdHandler)
         request_map.bind(GetSiteByIdQuery, GetSiteByIdHandler)
         request_map.bind(GetDirectorySitesQuery, GetDirectorySitesHandler)
@@ -195,6 +198,8 @@ class UsersContainer:
             return GetEmployeesHandler(
                 employee_repository=self.employee_read_repository
             )
+        if handler_type is GetEmployeeByIdHandler:
+            return GetEmployeeByIdHandler(employee_repository=self.employee_read_repository)
         if handler_type is CreateSiteHandler:
             return CreateSiteHandler(
                 unit_of_work=self.unit_of_work,
