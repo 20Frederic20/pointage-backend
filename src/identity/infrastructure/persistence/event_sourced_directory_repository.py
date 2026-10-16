@@ -52,6 +52,12 @@ class EventSourcedDirectoryRepository(IDirectoryRepository):
         streams = await self._store.load_streams(ids, DIRECTORY_EVENT_TYPES)
         return [Directory.rehydrate(DirectoryId(stream_id), events) for stream_id, events in streams.items()]
 
+    async def find(self, *, limit: int = 50, offset: int = 0) -> list[Directory]:
+        raise NotImplementedError("Listing directories is a query: read the directories read model")
+
+    async def count(self) -> int:
+        raise NotImplementedError("Counting directories is a query: read the directories read model")
+
     async def save(self, directory: Directory) -> None:
         events = directory.domain_events
         await self._store.append(

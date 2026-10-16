@@ -96,6 +96,12 @@ class DirectoryDTO(DTO):
 
 
 @dataclass(frozen=True)
+class DirectoriesPageDTO(DTO):
+    items: tuple[DirectoryDTO, ...]
+    total: int
+
+
+@dataclass(frozen=True)
 class UsersPageDTO(DTO):
     items: tuple[UserDTO, ...]
     total: int

@@ -6,6 +6,7 @@ from .create_site_handler import CreateSiteHandler
 from .deactivate_site_handler import DeactivateSiteHandler
 from .deactivate_user_handler import DeactivateUserHandler
 from .end_employee_assignment_handler import EndEmployeeAssignmentHandler
+from .get_directories_handler import GetDirectoriesHandler
 from .get_directory_by_id_handler import GetDirectoryByIdHandler
 from .get_directory_sites_handler import GetDirectorySitesHandler
 from .get_employee_assignments_handler import GetEmployeeAssignmentsHandler
@@ -30,6 +31,7 @@ __all__ = [
     "DeactivateSiteHandler",
     "DeactivateUserHandler",
     "EndEmployeeAssignmentHandler",
+    "GetDirectoriesHandler",
     "GetDirectoryByIdHandler",
     "GetDirectorySitesHandler",
     "GetEmployeeAssignmentsHandler",

@@ -1,12 +1,17 @@
 """Workspace routes. ``GET/PATCH /directories/me`` joins this routers together
 with the auth context's guards in a later slice."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from identity.application.commands.create_directory import CreateDirectoryCommand
-from identity.application.queries import GetDirectorySitesQuery
+from identity.application.queries import GetDirectoriesQuery, GetDirectorySitesQuery
 from identity.infrastructure import UsersContainer
-from identity.interface.schemas import CreateDirectoryRequest, DirectoryResponse, SiteResponse
+from identity.interface.schemas import (
+    CreateDirectoryRequest,
+    DirectoryListResponse,
+    DirectoryResponse,
+    SiteResponse,
+)
 
 from ..dependencies import get_users
 
@@ -16,6 +21,17 @@ router = APIRouter(prefix="/directories", tags=["directories"])
 def _directory_reponse(dto) -> DirectoryResponse:
     """DTO (dataclass) → wire schema, camelCase by alias."""
     return DirectoryResponse.model_validate(dto, from_attributes=True)
+
+
+@router.get("", response_model=DirectoryListResponse)
+async def list_directories(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    users: UsersContainer = Depends(get_users),  # noqa: B008
+) -> DirectoryListResponse:
+    """Directories by name, paged."""
+    page = await users.send(GetDirectoriesQuery(limit=limit, offset=offset))
+    return DirectoryListResponse.model_validate(page, from_attributes=True)
 
 
 @router.post(

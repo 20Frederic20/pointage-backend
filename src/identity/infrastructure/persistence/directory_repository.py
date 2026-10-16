@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, insert, or_, select, update
+from sqlalchemy import delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,6 +55,19 @@ class DirectoryRepository(IDirectoryRepository):
             ).limit(1)
         )
         return row is not None
+
+    async def find(self, *, limit: int = 50, offset: int = 0) -> list[Directory]:
+        stmt = (
+            select(DirectoryModel)
+            .order_by(DirectoryModel.name, DirectoryModel.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        rows = (await self._session.scalars(stmt)).all()
+        return [self._to_aggregate(row) for row in rows]
+
+    async def count(self) -> int:
+        return await self._session.scalar(select(func.count()).select_from(DirectoryModel)) or 0
 
     async def save(self, directory: Directory) -> None:
         if directory.version == 0:

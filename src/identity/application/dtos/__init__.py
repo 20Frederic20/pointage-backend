@@ -5,6 +5,7 @@ from .employee_dtos import (
 )
 from .site_dtos import SiteDTO
 from .user_dtos import (
+    DirectoriesPageDTO,
     DirectoryDTO,
     UserCredentialsDTO,
     UserDTO,
@@ -12,6 +13,7 @@ from .user_dtos import (
 )
 
 __all__ = [
+    "DirectoriesPageDTO",
     "DirectoryDTO",
     "EmployeeAssignmentDTO",
     "EmployeeDTO",

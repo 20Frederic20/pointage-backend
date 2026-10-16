@@ -47,6 +47,8 @@ from ..application import (
     DeactivateUserHandler,
     EndEmployeeAssignmentCommand,
     EndEmployeeAssignmentHandler,
+    GetDirectoriesHandler,
+    GetDirectoriesQuery,
     GetDirectoryByIdHandler,
     GetDirectoryByIdQuery,
     GetDirectorySitesHandler,
@@ -140,6 +142,7 @@ class UsersContainer:
         request_map.bind(GetUsersQuery, GetUsersHandler)
         request_map.bind(GetEmployeesQuery, GetEmployeesHandler)
         request_map.bind(GetEmployeeByIdQuery, GetEmployeeByIdHandler)
+        request_map.bind(GetDirectoriesQuery, GetDirectoriesHandler)
         request_map.bind(GetDirectoryByIdQuery, GetDirectoryByIdHandler)
         request_map.bind(GetSiteByIdQuery, GetSiteByIdHandler)
         request_map.bind(GetDirectorySitesQuery, GetDirectorySitesHandler)
@@ -234,6 +237,8 @@ class UsersContainer:
             return GetUserByIdHandler(user_repository=self.user_read_repository)
         if handler_type is GetUsersHandler:
             return GetUsersHandler(user_repository=self.user_read_repository)
+        if handler_type is GetDirectoriesHandler:
+            return GetDirectoriesHandler(directory_repository=self.directory_read_repository)
         if handler_type is GetDirectoryByIdHandler:
             return GetDirectoryByIdHandler(
                 directory_repository=self.directory_read_repository

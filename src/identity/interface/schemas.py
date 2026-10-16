@@ -161,6 +161,11 @@ class DirectoryResponse(_CamelSchema):
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
 
 
+class DirectoryListResponse(_CamelSchema):
+    items: list[DirectoryResponse]
+    total: int
+
+
 class SiteResponse(_CamelSchema):
     id: str
     directory_id: str = Field(alias="directoryId")
