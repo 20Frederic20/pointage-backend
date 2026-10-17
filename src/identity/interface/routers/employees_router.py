@@ -3,7 +3,12 @@ with the auth context's guards in a later slice."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from identity.application import GetEmployeeByIdQuery, GetEmployeesQuery
+from auth.interface import require_role
+from identity.application import (
+    GetEmployeeByIdQuery,
+    GetEmployeesQuery,
+    OnboardEmployeeCommand,
+)
 from identity.application.commands.create_employee import CreateEmployeeCommand
 from identity.domain import Role
 from identity.infrastructure import UsersContainer
@@ -12,6 +17,7 @@ from identity.interface.schemas import (
     CreateEmployeeRequest,
     EmployeeListResponse,
     EmployeeResponse,
+    OnboardEmployeeRequest,
     RoleSchema,
 )
 
@@ -52,6 +58,36 @@ async def create(
         )
     )
 
+    return _employee_reponse(dto)
+
+
+@router.post(
+    "/onboard",
+    response_model=EmployeeResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(Role.ADMIN))],
+)
+async def onboard(
+    payload: OnboardEmployeeRequest,
+    users: UsersContainer = Depends(get_users),  # noqa: B008
+) -> EmployeeResponse:
+    """Create the account and the employee together (ADMIN only): both are
+    saved, or neither — a taken email or number leaves no account behind."""
+    dto = await users.send(
+        OnboardEmployeeCommand(
+            email=payload.email,
+            password=payload.password,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            directory_id=payload.directory_id,
+            employee_number=payload.employee_number,
+            is_active=payload.is_active,
+            phone=payload.phone,
+            role=payload.role,
+            assignment_start_date=payload.assignment_start_date,
+            site_id=payload.site_id,
+        )
+    )
     return _employee_reponse(dto)
 
 

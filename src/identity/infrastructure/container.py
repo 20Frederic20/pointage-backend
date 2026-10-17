@@ -70,6 +70,8 @@ from ..application import (
     GetUsersQuery,
     MakeSitePrincipalCommand,
     MakeSitePrincipalHandler,
+    OnboardEmployeeCommand,
+    OnboardEmployeeHandler,
     RecordUserActivityCommand,
     RecordUserActivityHandler,
     RegisterUserCommand,
@@ -125,6 +127,7 @@ class UsersContainer:
         request_map = RequestMap()
         request_map.bind(CreateDirectoryCommand, CreateDirectoryHandler)
         request_map.bind(CreateEmployeeCommand, CreateEmployeeHandler)
+        request_map.bind(OnboardEmployeeCommand, OnboardEmployeeHandler)
         request_map.bind(UpdateEmployeeCommand, UpdateEmployeeHandler)
         request_map.bind(CreateSiteCommand, CreateSiteHandler)
         request_map.bind(ActivateSiteCommand, ActivateSiteHandler)
@@ -189,6 +192,17 @@ class UsersContainer:
                 employee_assignment_repository=self.employee_assignment_repository,
                 directory_repository=self.directory_repository,
                 site_repository=self.site_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is OnboardEmployeeHandler:
+            return OnboardEmployeeHandler(
+                unit_of_work=self.unit_of_work,
+                user_repository=self.user_repository,
+                employee_repository=self.employee_repository,
+                employee_assignment_repository=self.employee_assignment_repository,
+                directory_repository=self.directory_repository,
+                site_repository=self.site_repository,
+                password_hasher=self.password_hasher,
                 event_outbox=self.event_outbox,
             )
         if handler_type is UpdateEmployeeHandler:

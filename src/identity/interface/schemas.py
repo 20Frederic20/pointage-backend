@@ -33,6 +33,25 @@ class RegisterRequest(_CamelSchema):
     role: Role | None = None
 
 
+class OnboardEmployeeRequest(_CamelSchema):
+    """The account and the employee in one form; ``role`` applies to both."""
+
+    email: EmailStr
+    # Omitted: the account logs in with a code sent by email.
+    password: str | None = Field(default=None, min_length=8)
+    first_name: str | None = Field(default=None, max_length=255)
+    last_name: str | None = Field(default=None, max_length=255)
+    directory_id: str
+    role: Role = Field(default=Role.EMPLOYEE)
+    employee_number: str = Field(min_length=10, max_length=20)
+    is_active: bool = Field(default=False)
+    phone: str | None = Field(default=None, min_length=10, max_length=20)
+    # First day of the initial assignment; today when omitted.
+    assignment_start_date: date | None = None
+    # Site of the initial assignment; the directory's principal site when omitted.
+    site_id: str | None = None
+
+
 class CreateEmployeeRequest(_CamelSchema):
 
     user_id: str

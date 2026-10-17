@@ -8,6 +8,7 @@ from .deactivate_site import DeactivateSiteCommand
 from .deactivate_user import DeactivateUserCommand
 from .end_employee_assignment import EndEmployeeAssignmentCommand
 from .make_site_principal import MakeSitePrincipalCommand
+from .onboard_employee import OnboardEmployeeCommand
 from .record_user_activity import RecordUserActivityCommand
 from .register_user import RegisterUserCommand
 from .update_directory import UpdateDirectoryCommand
@@ -25,6 +26,7 @@ __all__ = [
     "DeactivateUserCommand",
     "EndEmployeeAssignmentCommand",
     "MakeSitePrincipalCommand",
+    "OnboardEmployeeCommand",
     "RecordUserActivityCommand",
     "RegisterUserCommand",
     "UpdateDirectoryCommand",

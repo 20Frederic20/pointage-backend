@@ -17,6 +17,7 @@ from .get_user_by_email_handler import GetUserByEmailHandler
 from .get_user_by_id_handler import GetUserByIdHandler
 from .get_users_handler import GetUsersHandler
 from .make_site_principal_handler import MakeSitePrincipalHandler
+from .onboard_employee_handler import OnboardEmployeeHandler
 from .record_user_activity_handler import RecordUserActivityHandler
 from .register_user_handler import RegisterUserHandler
 from .update_employee_handler import UpdateEmployeeHandler
@@ -42,6 +43,7 @@ __all__ = [
     "GetUserByIdHandler",
     "GetUsersHandler",
     "MakeSitePrincipalHandler",
+    "OnboardEmployeeHandler",
     "RecordUserActivityHandler",
     "RegisterUserHandler",
     "UpdateEmployeeHandler",
