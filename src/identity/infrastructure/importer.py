@@ -20,16 +20,34 @@ from ..domain.events import (
     SiteImported,
     UserImported,
 )
-from ..domain.value_objects.ids import DirectoryId, EmployeeAssignmentId, EmployeeId, SiteId, UserId
+from ..domain.value_objects.ids import (
+    DirectoryId,
+    EmployeeAssignmentId,
+    EmployeeId,
+    SiteId,
+    UserId,
+)
 from .persistence.directory_repository import DirectoryRepository
 from .persistence.employee_assignment_repository import EmployeeAssignmentRepository
 from .persistence.employee_repository import EmployeeRepository
-from .persistence.event_sourced_directory_repository import EventSourcedDirectoryRepository
-from .persistence.event_sourced_employee_assignment_repository import EventSourcedEmployeeAssignmentRepository
-from .persistence.event_sourced_employee_repository import EventSourcedEmployeeRepository
+from .persistence.event_sourced_directory_repository import (
+    EventSourcedDirectoryRepository,
+)
+from .persistence.event_sourced_employee_assignment_repository import (
+    EventSourcedEmployeeAssignmentRepository,
+)
+from .persistence.event_sourced_employee_repository import (
+    EventSourcedEmployeeRepository,
+)
 from .persistence.event_sourced_site_repository import EventSourcedSiteRepository
 from .persistence.event_sourced_user_repository import EventSourcedUserRepository
-from .persistence.models import DirectoryModel, EmployeeAssignmentModel, EmployeeModel, SiteModel, UserModel
+from .persistence.models import (
+    DirectoryModel,
+    EmployeeAssignmentModel,
+    EmployeeModel,
+    SiteModel,
+    UserModel,
+)
 from .persistence.site_repository import SiteRepository
 from .persistence.user_repository import UserRepository
 
