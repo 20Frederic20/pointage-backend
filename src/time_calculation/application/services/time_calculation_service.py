@@ -69,6 +69,7 @@ class TimeCalculationService:
         clockings = [
             (entry.occured_at, entry.entry_type)
             for entry in await self._time_entries.find_by_employee_between(employee_id, day_start, day_end)
+            if entry.counts
         ]
         absences = [
             (absence.start_at, absence.end_at)
