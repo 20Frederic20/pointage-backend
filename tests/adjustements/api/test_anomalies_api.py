@@ -263,6 +263,44 @@ def test_decision_succeeds_when_recalculation_fails(anomalies_api, caplog):
     )
 
 
+def test_decision_succeeds_when_recalculation_crashes(anomalies_api, caplog):
+    anomaly_id = anomalies_api.add_assisted_punch()
+    anomalies_api.time_calculation.error = RuntimeError("database went away")
+
+    with caplog.at_level(logging.WARNING, logger="audit"):
+        res = anomalies_api.client.post(f"/anomalies/{anomaly_id}/validate", json={})
+
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "VALIDATED"
+    anomaly, entry = stored(anomalies_api, anomaly_id)
+    assert anomaly.status == AnomalyStatus.VALIDATED
+    assert entry.validation_status == TimeEntryValidationStatus.COUNTED
+    assert any(
+        "action=RECALC_AFTER_DECISION" in r.getMessage()
+        and anomaly_id in r.getMessage()
+        and "status=FAILED" in r.getMessage()
+        and "RuntimeError" in r.getMessage()
+        for r in caplog.records
+    )
+
+
+def test_validating_an_anomaly_on_a_counted_entry_leaves_the_entry_untouched(anomalies_api):
+    anomaly_id = anomalies_api.add_late_anomaly()
+    _, before = stored(anomalies_api, anomaly_id)
+    events_before = list(anomalies_api.time_entries.streams[before.id.value])
+
+    res = anomalies_api.client.post(f"/anomalies/{anomaly_id}/validate", json={})
+
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "VALIDATED"
+    anomaly, entry = stored(anomalies_api, anomaly_id)
+    assert anomaly.status == AnomalyStatus.VALIDATED
+    assert entry.validation_status == TimeEntryValidationStatus.COUNTED
+    assert anomalies_api.time_entries.streams[entry.id.value] == events_before
+    assert decision_events(anomalies_api, anomaly_id) == []
+    assert len(anomalies_api.time_calculation.sent) == 1
+
+
 # ---- handler -----------------------------------------------------------------
 
 

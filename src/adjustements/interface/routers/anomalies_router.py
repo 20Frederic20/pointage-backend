@@ -137,6 +137,10 @@ async def _decide(
         audit.warning(
             "action=RECALC_AFTER_DECISION anomaly=%s status=SKIPPED reason=%s", anomaly_id, exc.code
         )
+    except Exception as exc:  # noqa: BLE001 - the decision is committed: never turn it into a 500
+        audit.exception(
+            "action=RECALC_AFTER_DECISION anomaly=%s status=FAILED reason=%s", anomaly_id, type(exc).__name__
+        )
     # 3. The row, from the read side (names), with the decision overlaid: the
     #    projection runs asynchronously and may not have caught up yet.
     decided = result.anomaly

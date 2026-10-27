@@ -14,6 +14,7 @@ from core.domain.entity import AggregateRoot
 from identity.domain import Role, UserId
 from identity.domain.errors.errors import RolePermissionDeniedError
 from identity.domain.repositories import IEmployeeRepository
+from punch.domain import TimeEntryValidationStatus
 from punch.domain.entities import TimeEntry
 from punch.domain.repositories import ITimeEntryRepository
 
@@ -72,14 +73,19 @@ class DecideAnomalyHandler(CommandHandler[DecideAnomalyCommand, AnomalyDecisionD
 
         # 4. The decision, anomaly first: it refuses a second decision and a
         #    missing comment before the time entry is touched.
+        #    The time entry follows only when it waits for a decision (PENDING):
+        #    an anomaly on an ordinary COUNTED entry (e.g. LATE) leaves it untouched.
         now = datetime.now(UTC)
         decided_by = UserId(actor)
+        entry_pending = time_entry.validation_status == TimeEntryValidationStatus.PENDING
         if request.decision == "VALIDATE":
             anomaly.validate(decided_by=decided_by, decided_at=now, comment=request.comment)
-            time_entry.validate(decided_by=decided_by, decided_at=now)
+            if entry_pending:
+                time_entry.validate(decided_by=decided_by, decided_at=now)
         else:
             anomaly.reject(decided_by=decided_by, decided_at=now, comment=request.comment)
-            time_entry.reject(decided_by=decided_by, decided_at=now)
+            if entry_pending:
+                time_entry.reject(decided_by=decided_by, decided_at=now)
 
         audit.info(
             "action=%s user_id=%s anomaly=%s time_entry=%s status=OK",
@@ -90,7 +96,7 @@ class DecideAnomalyHandler(CommandHandler[DecideAnomalyCommand, AnomalyDecisionD
             employee_id=time_entry.employee_id.value,
             occured_at=time_entry.occured_at,
         )
-        return result, [anomaly, time_entry]
+        return result, [anomaly, time_entry] if entry_pending else [anomaly]
 
     async def _persist(self, aggregate: AggregateRoot) -> None:
         if isinstance(aggregate, Anomaly):
