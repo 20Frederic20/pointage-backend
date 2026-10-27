@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from absences.interface.routers import absence_types_router, absences_router
+from adjustements.interface.routers import anomalies_router
 from auth.interface.routers import auth_router
 from core.exceptions import register_exception_handlers
 from core.settings import AppSettings, AuthSettings, DatabaseSettings, MailSettings, StorageSettings
@@ -89,6 +90,7 @@ def create_app(
     app.include_router(periods_router)
     app.include_router(calculation_rule_versions_router)
     app.include_router(daily_time_results_router)
+    app.include_router(anomalies_router)
     return app
 
 

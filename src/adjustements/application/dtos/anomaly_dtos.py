@@ -49,3 +49,44 @@ class AnomalyDTO(DTO):
 class AnomaliesPageDTO(DTO):
     items: tuple[AnomalyDTO, ...]
     total: int
+
+@dataclass(frozen=True)
+class AnomalyListItemDTO(DTO):
+    """One back-office row: the anomaly, its time entry, the punched employee
+    and the assistant, as joined on the read side."""
+
+    id: str
+    type: AnomalyType
+    severity: Severity
+    status: AnomalyStatus
+    detected_at: datetime
+    employee_id: str | None = None
+    employee_number: str | None = None
+    employee_first_name: str | None = None
+    employee_last_name: str | None = None
+    assisted_by_first_name: str | None = None
+    assisted_by_last_name: str | None = None
+    occured_at: datetime | None = None
+    entry_type: str | None = None
+    photo_key: str | None = None
+    decided_at: datetime | None = None
+    decision_comment: str | None = None
+
+    @property
+    def has_photo(self) -> bool:
+        return self.photo_key is not None
+
+
+@dataclass(frozen=True)
+class AnomalyListPageDTO(DTO):
+    items: tuple[AnomalyListItemDTO, ...]
+    total: int
+
+
+@dataclass(frozen=True)
+class AnomalyDecisionDTO(DTO):
+    """The decided anomaly, and what the day recalculation needs."""
+
+    anomaly: AnomalyDTO
+    employee_id: str
+    occured_at: datetime

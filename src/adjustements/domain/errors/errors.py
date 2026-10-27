@@ -23,3 +23,11 @@ class DecisionCommentTooLongError(DomainError):
     code = "DECISION_COMMENT_TOO_LONG"
     http_status = 422
     severity = Severity.WARNING
+
+
+class SelfDecisionError(DomainError):
+    """Raised when the decider is the punched employee or the assistant of the anomaly."""
+
+    code = "SELF_DECISION"
+    http_status = 403
+    severity = Severity.WARNING

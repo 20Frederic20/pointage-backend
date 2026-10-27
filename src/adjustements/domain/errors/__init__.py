@@ -1,3 +1,13 @@
-from .errors import AnomalyAlreadyDecidedError, DecisionCommentRequiredError, DecisionCommentTooLongError
+from .errors import (
+    AnomalyAlreadyDecidedError,
+    DecisionCommentRequiredError,
+    DecisionCommentTooLongError,
+    SelfDecisionError,
+)
 
-__all__ = ["AnomalyAlreadyDecidedError", "DecisionCommentRequiredError", "DecisionCommentTooLongError"]
+__all__ = [
+    "AnomalyAlreadyDecidedError",
+    "DecisionCommentRequiredError",
+    "DecisionCommentTooLongError",
+    "SelfDecisionError",
+]
