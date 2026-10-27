@@ -4,7 +4,7 @@ from starlette.middleware.cors import CORSMiddleware
 from absences.interface.routers import absence_types_router, absences_router
 from auth.interface.routers import auth_router
 from core.exceptions import register_exception_handlers
-from core.settings import AppSettings, AuthSettings, DatabaseSettings, MailSettings
+from core.settings import AppSettings, AuthSettings, DatabaseSettings, MailSettings, StorageSettings
 from identity.interface.routers import (
     directories_router,
     employee_assignments_router,
@@ -49,6 +49,7 @@ def create_app(
     database_settings: DatabaseSettings | None = None,
     auth_settings: AuthSettings | None = None,
     mail_settings: MailSettings | None = None,
+    storage_settings: StorageSettings | None = None,
 ) -> FastAPI:
     """
     Application factory — middleware, exception handlers, routers, lifespan.
@@ -58,6 +59,7 @@ def create_app(
     # Fails fast at startup when JWT_SECRET is missing (no placeholder secret).
     auth_settings = auth_settings or AuthSettings()
     mail_settings = mail_settings or MailSettings()
+    storage_settings = storage_settings or StorageSettings()
 
     app = FastAPI(
         title=settings.app_name,
@@ -68,6 +70,7 @@ def create_app(
     app.state.database_settings = database_settings
     app.state.auth_settings = auth_settings
     app.state.mail_settings = mail_settings
+    app.state.storage_settings = storage_settings
 
     _add_cors(app, settings)
     register_exception_handlers(app)
