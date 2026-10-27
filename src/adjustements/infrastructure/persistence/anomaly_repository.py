@@ -6,7 +6,7 @@ from sqlalchemy import delete, insert, select, update
 
 from core.domain.errors import ConflictError, NotFoundError
 from .models import AnomalyModel
-from identity.domain import EmployeeId
+from identity.domain import EmployeeId, UserId
 from punch.domain import TimeEntryId
 from punch.infrastructure.persistence.models import TimeEntryModel
 
@@ -23,6 +23,11 @@ def _to_aggregate(row) -> Anomaly:
         detected_at=row.detected_at,
         resolved_at=row.resolved_at,
         description=row.description,
+        employee_id=EmployeeId(row.employee_id) if row.employee_id else None,
+        assisted_by_user_id=UserId(row.assisted_by_user_id) if row.assisted_by_user_id else None,
+        decided_by=UserId(row.decided_by) if row.decided_by else None,
+        decided_at=row.decided_at,
+        decision_comment=row.decision_comment,
         created_at=row.created_at,
         updated_at=row.updated_at,
         version=row.version_id,
@@ -102,6 +107,11 @@ class AnomalyRepository(IAnomalyRepository):
                     detected_at=anomaly.detected_at,
                     resolved_at=anomaly.resolved_at,
                     description=anomaly.description,
+                    employee_id=anomaly.employee_id.value if anomaly.employee_id else None,
+                    assisted_by_user_id=anomaly.assisted_by_user_id.value if anomaly.assisted_by_user_id else None,
+                    decided_by=anomaly.decided_by.value if anomaly.decided_by else None,
+                    decided_at=anomaly.decided_at,
+                    decision_comment=anomaly.decision_comment,
                     created_at=anomaly.created_at,
                     updated_at=anomaly.updated_at,
                     version_id=1,
@@ -119,6 +129,9 @@ class AnomalyRepository(IAnomalyRepository):
                 status=anomaly.status,
                 resolved_at=anomaly.resolved_at,
                 description=anomaly.description,
+                decided_by=anomaly.decided_by.value if anomaly.decided_by else None,
+                decided_at=anomaly.decided_at,
+                decision_comment=anomaly.decision_comment,
                 updated_at=anomaly.updated_at,
                 version_id=anomaly.version + 1,
             )

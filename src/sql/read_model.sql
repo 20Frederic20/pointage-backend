@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS anomalies (
     description text,
     detected_at timestamp with time zone NOT NULL,
     resolved_at timestamp with time zone,
+    employee_id character varying(32),
+    assisted_by_user_id character varying(32),
+    decided_by character varying(32),
+    decided_at timestamp with time zone,
+    decision_comment character varying(512),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     version_id integer DEFAULT 1
