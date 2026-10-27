@@ -61,6 +61,14 @@ class SelfAssistedPunchError(DomainError):
     severity = Severity.WARNING
 
 
+class SelfManagerPunchError(DomainError):
+    """Raised when a responsible punches for their own employee record."""
+
+    code = "SELF_MANAGER_PUNCH"
+    http_status = 409
+    severity = Severity.WARNING
+
+
 class InvalidPhotoError(DomainError):
     """Raised when the selfie is missing, empty, too large or not a JPEG / PNG."""
 

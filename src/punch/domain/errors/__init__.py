@@ -3,6 +3,7 @@ from .errors import (
     InvalidPhotoError,
     PunchAlreadyExistsError,
     SelfAssistedPunchError,
+    SelfManagerPunchError,
     TimeEntryNotPendingError,
     TooFarFromWorkplaceError,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "InvalidPhotoError",
     "PunchAlreadyExistsError",
     "SelfAssistedPunchError",
+    "SelfManagerPunchError",
     "TimeEntryNotPendingError",
     "TooFarFromWorkplaceError",
 ]

@@ -16,7 +16,7 @@ from identity.interface.routers import (
 from lifespan import lifespan
 from periods.interface.routers import periods_router
 from planning.interface.routers import employee_schedules_router, time_profiles_router
-from punch.interface.routers import time_entries_router
+from punch.interface.routers import manager_time_entries_router, time_entries_router
 from time_calculation.interface.routers import (
     calculation_rule_versions_router,
     daily_time_results_router,
@@ -83,6 +83,7 @@ def create_app(
     app.include_router(employees_router)
     app.include_router(employee_assignments_router)
     app.include_router(time_entries_router)
+    app.include_router(manager_time_entries_router)
     app.include_router(absence_types_router)
     app.include_router(absences_router)
     app.include_router(time_profiles_router)

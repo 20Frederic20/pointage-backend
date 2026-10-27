@@ -19,6 +19,12 @@ class CreateTimeEntryRequest(_CamelSchema):
     wifi_identifier: str | None = Field(default=None, max_length=255)
 
 
+class CreateManagerTimeEntryRequest(_CamelSchema):
+    """Only the retry key: the time and the direction are decided by the server."""
+
+    idempotency_key: str = Field(alias="idempotencyKey", min_length=1, max_length=255)
+
+
 class TimeEntryResponse(_CamelSchema):
 
     id: str

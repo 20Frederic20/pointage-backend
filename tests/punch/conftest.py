@@ -18,7 +18,7 @@ from identity.domain.value_objects.location import Location
 from punch.domain import TimeEntryValidationStatus
 from punch.infrastructure import PunchesContainer
 from punch.interface import get_punches
-from punch.interface.routers import time_entries_router
+from punch.interface.routers import manager_time_entries_router, time_entries_router
 
 COTONOU = Location(6.3654, 2.4183)
 PORTO_NOVO = Location(6.4969, 2.6289)
@@ -67,6 +67,12 @@ class _NullEventBus:
 class InMemoryEmployees:
     def __init__(self) -> None:
         self.items: list[Employee] = []
+
+    async def get_by_id(self, employee_id):
+        for employee in self.items:
+            if employee.id == employee_id:
+                return employee
+        raise NotFoundError(f"Employee {employee_id} not found", context=employee_id.value)
 
     async def find_by_employee_number(self, employee_number):
         return next((e for e in self.items if e.employee_number == employee_number), None)
@@ -200,6 +206,7 @@ def punch_api(photo_storage):
     app = FastAPI()
     register_exception_handlers(app)
     app.include_router(time_entries_router)
+    app.include_router(manager_time_entries_router)
     app.dependency_overrides[get_punches] = lambda: container
 
     def act_as(user_id, role="EMPLOYEE"):

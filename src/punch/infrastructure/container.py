@@ -27,10 +27,14 @@ from identity.infrastructure.persistence.event_sourced_user_repository import (
 )
 from punch.application.commands import (
     CreateAssistedTimeEntryCommand,
+    CreateManagerTimeEntryCommand,
     CreateTimeEntryCommand,
 )
 from punch.application.handlers.create_assisted_time_entry_handler import (
     CreateAssistedTimeEntryHandler,
+)
+from punch.application.handlers.create_manager_time_entry_handler import (
+    CreateManagerTimeEntryHandler,
 )
 from punch.application.handlers.create_time_entry_handler import CreateTimeEntryHandler
 from punch.application.handlers.lookup_employee_handler import LookupEmployeeHandler
@@ -66,6 +70,7 @@ class PunchesContainer:
         request_map = RequestMap()
         request_map.bind(CreateTimeEntryCommand, CreateTimeEntryHandler)
         request_map.bind(CreateAssistedTimeEntryCommand, CreateAssistedTimeEntryHandler)
+        request_map.bind(CreateManagerTimeEntryCommand, CreateManagerTimeEntryHandler)
         request_map.bind(LookupEmployeeQuery, LookupEmployeeHandler)
 
         self._mediator = ApplicationMediator(
@@ -94,6 +99,15 @@ class PunchesContainer:
                 employee_assignment_repository=self.employee_assignment_repository,
                 anomaly_repository=self.anomaly_repository,
                 photo_storage=self.photo_storage,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is CreateManagerTimeEntryHandler:
+            return CreateManagerTimeEntryHandler(
+                unit_of_work=self.unit_of_work,
+                time_entry_repository=self.time_entry_repository,
+                employee_repository=self.employee_repository,
+                employee_assignment_repository=self.employee_assignment_repository,
+                site_repository=self.site_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is LookupEmployeeHandler:
