@@ -6,13 +6,9 @@ from minio.error import S3Error
 
 from core.domain.errors import NotFoundError
 from core.settings import StorageSettings
-from punch.domain import TimeEntryId
+from punch.application.ports import photo_key_for
 
-_EXTENSIONS = {"image/jpeg": "jpg", "image/png": "png"}
-
-
-def photo_key_for(time_entry_id: TimeEntryId, content_type: str) -> str:
-    return f"time-entries/{time_entry_id}.{_EXTENSIONS[content_type]}"
+__all__ = ["MinioPhotoStorage", "photo_key_for"]
 
 
 class MinioPhotoStorage:

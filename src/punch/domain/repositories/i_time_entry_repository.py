@@ -19,6 +19,10 @@ class ITimeEntryRepository(IRepository[TimeEntry, TimeEntryId]):
     async def find_last_by_employee_id(self, employee_id: EmployeeId) -> TimeEntry | None:
         ...
 
+    async def reserve_idempotency_key(self, idempotency_key: str, time_entry_id: TimeEntryId) -> None:
+        """Take ``idempotency_key`` for ``time_entry_id`` in the command's transaction;
+        ``ConflictError`` if another time entry holds it."""
+
     @abstractmethod
     async def find_by_employee_between(
         self, employee_id: EmployeeId, start: datetime, end: datetime

@@ -14,14 +14,11 @@ from identity.domain.repositories import (
 )
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
+from punch.application.services import punch_rules
 from punch.domain import LocationConfidence, TimeEntryId
 from punch.domain.entities import TimeEntry
 from punch.domain.errors import EmployeeNotAssignedError, TooFarFromWorkplaceError
 from punch.domain.repositories import ITimeEntryRepository
-from punch.domain.services.distance_calculator import DistanceCalculator
-from punch.domain.services.entry_type_resolver import EntryTypeResolver
-
-MAX_DISTANCE_METERS = 500
 
 
 class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO]):
@@ -50,31 +47,21 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
             raise NotFoundError("No employee record for this account", context=request.user_id)
 
         # The reference location is the directory of the assignment covering today.
-        assignment = await self.employee_assignment_repository.find_active(employee.id, datetime.now(UTC).date())
-        if assignment is None:
+        try:
+            site: Site = await punch_rules.resolve_today_site(
+                employee, self.employee_assignment_repository, self.site_repository
+            )
+        except EmployeeNotAssignedError:
             audit.warning("action=PUNCH user_id=%s employee=%s status=FAIL reason=not_assigned", request.user_id, employee.employee_number)
-            raise EmployeeNotAssignedError(
-                f"Employee {employee.employee_number} has no active assignment today",
-                context=employee.id.value,
-            )
-        site: Site = await self.site_repository.get_by_id(assignment.site_id)
+            raise
 
-        distance = DistanceCalculator.calculate(
-            latitude_1=request.location.latitude,
-            longitude_1=request.location.longitude,
-            latitude_2=site.location.latitude,
-            longitude_2=site.location.longitude,
-        )
+        try:
+            distance = punch_rules.ensure_within_site(request.location, site, employee_id=employee.id)
+        except TooFarFromWorkplaceError as exc:
+            audit.warning("action=PUNCH user_id=%s employee=%s status=FAIL reason=too_far distance=%.0fm", request.user_id, employee.employee_number, exc.distance_meters)
+            raise
 
-        if distance > MAX_DISTANCE_METERS:
-            audit.warning("action=PUNCH user_id=%s employee=%s status=FAIL reason=too_far distance=%.0fm", request.user_id, employee.employee_number, distance)
-            raise TooFarFromWorkplaceError(
-                f"Employee {employee.id} is {distance:.0f} m from the workplace (max {MAX_DISTANCE_METERS} m)",
-                context=employee.id.value,
-            )
-
-        last_entry: TimeEntry | None = await self.time_entry_repository.find_last_by_employee_id(employee.id)
-        entry_type = EntryTypeResolver.resolve(last_entry, datetime.now(UTC))
+        entry_type = await punch_rules.next_entry_type(employee.id, self.time_entry_repository, datetime.now(UTC))
 
         location_confidence = (
             LocationConfidence("HIGH")

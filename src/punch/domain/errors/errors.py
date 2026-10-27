@@ -40,10 +40,30 @@ class TooFarFromWorkplaceError(DomainError):
     http_status = 422
     severity = Severity.WARNING
 
+    def __init__(self, message: str, *, context: str | None = None, distance_meters: float | None = None) -> None:
+        super().__init__(message, context=context)
+        self.distance_meters = distance_meters
+
 
 class TimeEntryNotPendingError(DomainError):
     """Raised when a decision targets a time entry that is not waiting for one."""
 
     code = "TIME_ENTRY_NOT_PENDING"
     http_status = 409
+    severity = Severity.WARNING
+
+
+class SelfAssistedPunchError(DomainError):
+    """Raised when the assisted path targets the caller's own employee number."""
+
+    code = "SELF_ASSISTED_PUNCH"
+    http_status = 409
+    severity = Severity.WARNING
+
+
+class InvalidPhotoError(DomainError):
+    """Raised when the selfie is missing, empty, too large or not a JPEG / PNG."""
+
+    code = "INVALID_PHOTO"
+    http_status = 422
     severity = Severity.WARNING

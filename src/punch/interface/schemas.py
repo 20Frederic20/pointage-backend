@@ -39,3 +39,11 @@ class TimeEntryListResponse(_CamelSchema):
 
     time_entries: list[TimeEntryResponse]
     total: int
+
+
+class EmployeeLookupResponse(_CamelSchema):
+    """Names only: enough for the colleague to confirm "C'est moi"."""
+
+    employee_number: str = Field(alias="employeeNumber")
+    first_name: str | None = Field(default=None, alias="firstName")
+    last_name: str | None = Field(default=None, alias="lastName")

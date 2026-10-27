@@ -17,6 +17,8 @@ from ...domain.value_objects.ids import TimeEntryId
 
 TIME_ENTRY_STREAM = "punch.time_entry"
 
+IDEMPOTENCY_KEY_SCOPE = "punch.idempotency_key"
+
 TIME_ENTRY_EVENT_TYPES = {
     "punchs.time_entry.created": TimeEntryCreated,
     "punchs.time_entry.imported": TimeEntryImported,
@@ -64,6 +66,9 @@ class EventSourcedTimeEntryRepository(ITimeEntryRepository):
             if entry.validation_status != TimeEntryValidationStatus.REJECTED:
                 return entry
         return None
+
+    async def reserve_idempotency_key(self, idempotency_key: str, time_entry_id: TimeEntryId) -> None:
+        await self._store.reserve(IDEMPOTENCY_KEY_SCOPE, idempotency_key, time_entry_id.value)
 
     async def find_by_employee_between(
         self, employee_id: EmployeeId, start: datetime, end: datetime

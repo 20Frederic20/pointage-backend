@@ -14,9 +14,11 @@ def get_punches(
     read_session: AsyncSession = Depends(get_read_session),
 ) -> PunchesContainer:
     """One punches container per request, wired over the request-scoped
-    sessions (write: event store, read: read models) and the app-wide event bus."""
+    sessions (write: event store, read: read models), the app-wide event bus
+    and the app-wide selfie storage."""
     return build_punches_container(
         write_session=write_session,
         read_session=read_session,
         event_bus=request.app.state.container.event_bus,
+        photo_storage=request.app.state.container.photo_storage,
     )

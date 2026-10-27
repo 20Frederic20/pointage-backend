@@ -43,6 +43,15 @@ class TimeEntryDTO(DTO):
             updated_at=time_entry.updated_at,
         )
 
+@dataclass(frozen=True)
+class EmployeeLookupDTO(DTO):
+    """What an assisted punch may show about the punched employee: nothing else."""
+
+    employee_number: str
+    first_name: str | None
+    last_name: str | None
+
+
 class TimeEntriesPageDTO(DTO):
     items: tuple[TimeEntryDTO, ...]
     total: int

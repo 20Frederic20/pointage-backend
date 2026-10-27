@@ -46,6 +46,19 @@ class EventSourcedEmployeeRepository(IEmployeeWriteRepository):
             return None
         return max(employees, key=lambda employee: (employee.is_active, employee.created_at))
 
+    async def find_by_employee_number(self, employee_number: str) -> Employee | None:
+        """The employee whose *current* number is ``employee_number`` (the active one first)."""
+        ids = await self._store.find_stream_ids(EMPLOYEE_STREAM, {"employee_number": employee_number})
+        streams = await self._store.load_streams(ids, EMPLOYEE_EVENT_TYPES)
+        employees = [
+            employee
+            for stream_id, events in streams.items()
+            if (employee := Employee.rehydrate(EmployeeId(stream_id), events)).employee_number == employee_number
+        ]
+        if not employees:
+            return None
+        return max(employees, key=lambda employee: (employee.is_active, employee.created_at))
+
     async def save(self, employee: Employee) -> None:
         events = employee.domain_events
         number = None
