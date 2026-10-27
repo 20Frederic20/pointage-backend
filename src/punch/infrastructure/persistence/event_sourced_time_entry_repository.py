@@ -8,10 +8,10 @@ from core.domain.errors import NotFoundError
 from core.domain.events import encode_datetime
 from core.infrastructure.event_store import EventModel, EventStore
 from identity.domain import EmployeeId
-from punch.domain import EntryType
+from punch.domain import EntryType, TimeEntryValidationStatus
 
 from ...domain.entities import TimeEntry
-from ...domain.events import TimeEntryCreated, TimeEntryImported
+from ...domain.events import TimeEntryCreated, TimeEntryImported, TimeEntryRejected, TimeEntryValidated
 from ...domain.repositories import ITimeEntryRepository
 from ...domain.value_objects.ids import TimeEntryId
 
@@ -20,6 +20,8 @@ TIME_ENTRY_STREAM = "punch.time_entry"
 TIME_ENTRY_EVENT_TYPES = {
     "punchs.time_entry.created": TimeEntryCreated,
     "punchs.time_entry.imported": TimeEntryImported,
+    "punchs.time_entry.validated": TimeEntryValidated,
+    "punchs.time_entry.rejected": TimeEntryRejected,
 }
 
 
@@ -51,10 +53,17 @@ class EventSourcedTimeEntryRepository(ITimeEntryRepository):
         return bool(ids)
 
     async def find_last_by_employee_id(self, employee_id: EmployeeId) -> TimeEntry | None:
-        stream_id = await self._store.session.scalar(
-            self._employee_entries(employee_id).order_by(EventModel.payload["occured_at"].astext.desc()).limit(1)
-        )
-        return await self.get_by_id(TimeEntryId(stream_id)) if stream_id is not None else None
+        """The newest entry that was not rejected (a rejected punch never happened)."""
+        stream_ids = (
+            await self._store.session.scalars(
+                self._employee_entries(employee_id).order_by(EventModel.payload["occured_at"].astext.desc())
+            )
+        ).all()
+        for stream_id in stream_ids:
+            entry = await self.get_by_id(TimeEntryId(stream_id))
+            if entry.validation_status != TimeEntryValidationStatus.REJECTED:
+                return entry
+        return None
 
     async def find_by_employee_between(
         self, employee_id: EmployeeId, start: datetime, end: datetime

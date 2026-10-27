@@ -31,6 +31,8 @@ class TimeEntryResponse(_CamelSchema):
     location_confidence: LocationConfidence | None = None
     idempotency_key: str | None = None
     wifi_identifier: str | None = None
+    assisted_by_user_id: str | None = None
+    validation_status: str = "COUNTED"
 
 
 class TimeEntryListResponse(_CamelSchema):

@@ -39,3 +39,11 @@ class TooFarFromWorkplaceError(DomainError):
     code = "TOO_FAR_FROM_WORKPLACE"
     http_status = 422
     severity = Severity.WARNING
+
+
+class TimeEntryNotPendingError(DomainError):
+    """Raised when a decision targets a time entry that is not waiting for one."""
+
+    code = "TIME_ENTRY_NOT_PENDING"
+    http_status = 409
+    severity = Severity.WARNING

@@ -5,7 +5,7 @@ from typing import Any
 from cqrs.events.event import DCNotificationEvent
 
 from core.domain.events import BaseEvent
-from punch.domain.events import TimeEntryCreated, TimeEntryImported
+from punch.domain.events import TimeEntryCreated, TimeEntryImported, TimeEntryRejected, TimeEntryValidated
 
 PUNCHES_TOPIC = "punches"
 
@@ -42,6 +42,9 @@ PUNCHES_EVENT_MAPPERS: dict[type, object] = {
     TimeEntryCreated: _to_time_entry_created,
     # Takeover of the state tables: stored, never published.
     TimeEntryImported: None,
+    # Decisions only change the read model for now.
+    TimeEntryValidated: None,
+    TimeEntryRejected: None,
 }
 
 PUNCHES_EVENT_REGISTRY  = {
