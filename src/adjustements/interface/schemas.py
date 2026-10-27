@@ -36,6 +36,7 @@ class AnomalyItemResponse(_CamelSchema):
     has_photo: bool = False
     decided_at: datetime | None = None
     decision_comment: str | None = None
+    site_name: str | None = None
 
 
 class AnomalyListResponse(_CamelSchema):

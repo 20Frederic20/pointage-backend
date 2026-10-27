@@ -1,16 +1,23 @@
 """Read side of the back-office anomaly list (read database).
 
 One row per anomaly, joined with its time entry, the punched employee and
-their user, and the assistant's user. Outer joins: a projection that lags
+their user, the assistant's user, and the name of the site the employee was
+assigned to on the punch date (UTC date; a scalar subquery, so overlapping
+assignments never duplicate a row). Outer joins: a projection that lags
 (or an old anomaly without employee / assistant) leaves the columns empty
 instead of hiding the anomaly.
 """
 
-from sqlalchemy import func, select
+from sqlalchemy import Date, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from identity.infrastructure.persistence.models import EmployeeModel, UserModel
+from identity.infrastructure.persistence.models import (
+    EmployeeAssignmentModel,
+    EmployeeModel,
+    SiteModel,
+    UserModel,
+)
 from punch.infrastructure.persistence.models import TimeEntryModel
 
 from ...application.dtos import AnomalyListItemDTO
@@ -55,6 +62,20 @@ class AnomalyReadRepository:
     @staticmethod
     def _items():
         employee_id = func.coalesce(AnomalyModel.employee_id, TimeEntryModel.employee_id)
+        punch_date = cast(func.timezone("UTC", TimeEntryModel.occured_at), Date)
+        site_name = (
+            select(SiteModel.name)
+            .join(EmployeeAssignmentModel, EmployeeAssignmentModel.site_id == SiteModel.id)
+            .where(
+                EmployeeAssignmentModel.employee_id == employee_id,
+                EmployeeAssignmentModel.start_date <= punch_date,
+                or_(EmployeeAssignmentModel.end_date.is_(None), EmployeeAssignmentModel.end_date >= punch_date),
+            )
+            .order_by(EmployeeAssignmentModel.start_date.desc())
+            .limit(1)
+            .correlate(AnomalyModel, TimeEntryModel)
+            .scalar_subquery()
+        )
         return (
             select(
                 AnomalyModel.id,
@@ -73,6 +94,7 @@ class AnomalyReadRepository:
                 TimeEntryModel.occured_at,
                 TimeEntryModel.entry_type,
                 TimeEntryModel.photo_key,
+                site_name.label("site_name"),
             )
             .select_from(AnomalyModel)
             .outerjoin(TimeEntryModel, TimeEntryModel.id == AnomalyModel.time_entry_id)
@@ -109,4 +131,5 @@ class AnomalyReadRepository:
             photo_key=row.photo_key,
             decided_at=row.decided_at,
             decision_comment=row.decision_comment,
+            site_name=row.site_name,
         )

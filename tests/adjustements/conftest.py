@@ -111,6 +111,18 @@ class InMemoryAnomalyReadRepository:
             employee = employees.get((anomaly.employee_id or entry.employee_id).value)
             punched = users.get(employee.user_id.value) if employee else None
             assistant = users.get(anomaly.assisted_by_user_id.value) if anomaly.assisted_by_user_id else None
+            punch_date = entry.occured_at.astimezone(UTC).date()
+            site_name = next(
+                (
+                    a.site_name
+                    for a in sorted(self._ns.assignments, key=lambda a: a.start_date, reverse=True)
+                    if employee is not None
+                    and a.employee_id == employee.id.value
+                    and a.start_date <= punch_date
+                    and (a.end_date is None or a.end_date >= punch_date)
+                ),
+                None,
+            )
             items.append(
                 AnomalyListItemDTO(
                     id=anomaly.id.value,
@@ -129,6 +141,7 @@ class InMemoryAnomalyReadRepository:
                     photo_key=entry.photo_key,
                     decided_at=anomaly.decided_at,
                     decision_comment=anomaly.decision_comment,
+                    site_name=site_name,
                 )
             )
         return sorted(items, key=lambda i: i.detected_at, reverse=True)
@@ -144,11 +157,16 @@ class InMemoryAnomalyReadRepository:
 
 
 class FakeTimeCalculation:
-    """Records the recalculations; raises ``error`` when one is set."""
+    """Records the recalculations; raises ``error`` when one is set. Work dates
+    are read in ``zone`` (the employee's time-profile timezone in production)."""
 
     def __init__(self) -> None:
         self.sent: list = []
         self.error: Exception | None = None
+        self.zone = UTC
+
+    async def work_date_of(self, employee_id, instant):
+        return instant.astimezone(self.zone).date()
 
     async def send(self, request):
         self.sent.append(request)
@@ -190,6 +208,7 @@ def anomalies_api():
         time_entries=InMemoryStreams(TimeEntry),
         photos=InMemoryPhotoStorage(),
         time_calculation=FakeTimeCalculation(),
+        assignments=[],  # employee_assignments joined to sites: employee_id, site_name, start/end date
     )
     ns.read = InMemoryAnomalyReadRepository(ns)
 
@@ -293,6 +312,12 @@ def anomalies_api():
     def act_as(user_id, role="MANAGER"):
         app.dependency_overrides[get_current_principal] = lambda: PrincipalDTO(user_id=user_id, role=role)
 
+    def assign(employee, site_name, *, start_date, end_date=None):
+        ns.assignments.append(
+            SimpleNamespace(employee_id=employee, site_name=site_name, start_date=start_date, end_date=end_date)
+        )
+
+    ns.assign = assign
     ns.container = container
     ns.act_as = act_as
     ns.add_assisted_punch = add_assisted_punch

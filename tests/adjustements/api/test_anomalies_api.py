@@ -3,7 +3,8 @@ decision, which updates the anomaly and its time entry, then recalculates the da
 
 import asyncio
 import logging
-from datetime import UTC
+from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -12,6 +13,7 @@ from adjustements.domain.value_objects import AnomalyStatus
 from identity.domain import UserId
 from identity.domain.errors.errors import RolePermissionDeniedError
 from punch.domain import TimeEntryValidationStatus
+from punch.domain.entities import time_entry as time_entry_module
 from punch.domain.events import TimeEntryRejected, TimeEntryValidated
 from time_calculation.application.commands import CalculateDailyTimeCommand
 from time_calculation.domain.errors import NoPeriodForDateError
@@ -65,6 +67,8 @@ def test_every_route_requires_responsible_role(anomalies_api):
 
 
 def test_list_items_carry_names_and_photo_flag(anomalies_api):
+    anomalies_api.assign("emp2", "Ancien site", start_date=date(2020, 1, 1), end_date=date(2020, 12, 31))
+    anomalies_api.assign("emp2", "Siège Cotonou", start_date=date(2021, 1, 1))
     late_id = anomalies_api.add_late_anomaly()
     assisted_id = anomalies_api.add_assisted_punch()
     _, entry = stored(anomalies_api, assisted_id)
@@ -91,6 +95,7 @@ def test_list_items_carry_names_and_photo_flag(anomalies_api):
         "hasPhoto": True,
         "decidedAt": None,
         "decisionComment": None,
+        "siteName": "Siège Cotonou",
     }
     assert newest["occuredAt"].startswith(entry.occured_at.isoformat()[:19])
     assert oldest["id"] == late_id
@@ -116,6 +121,7 @@ def test_detail_returns_the_item_or_404(anomalies_api):
     assert res.json()["id"] == anomaly_id
     assert res.json()["employeeLastName"] == "Houngbo"
     assert res.json()["hasPhoto"] is True
+    assert res.json()["siteName"] is None  # no assignment on the punch date
 
     assert anomalies_api.client.get("/anomalies/unknown").status_code == 404
 
@@ -129,6 +135,7 @@ def test_photo_route_returns_image_bytes_and_content_type(anomalies_api):
     assert res.status_code == 200
     assert res.content == JPEG
     assert res.headers["content-type"] == "image/jpeg"
+    assert res.headers["x-content-type-options"] == "nosniff"
 
     without_photo = anomalies_api.add_assisted_punch(photo=False)
     assert anomalies_api.client.get(f"/anomalies/{without_photo}/photo").status_code == 404
@@ -161,6 +168,20 @@ def test_validate_marks_anomaly_validated_and_entry_counted(anomalies_api):
 
     assert anomalies_api.time_calculation.sent == [
         CalculateDailyTimeCommand(employee_id="emp2", work_date=entry.occured_at.astimezone(UTC).date())
+    ]
+
+
+def test_recalculation_uses_the_local_work_date(anomalies_api, monkeypatch):
+    # 23:30 UTC on the 7th is 00:30 on the 8th in Porto-Novo (UTC+1): the day to recalc is the 8th.
+    monkeypatch.setattr(time_entry_module, "_utcnow", lambda: datetime(2026, 10, 7, 23, 30, tzinfo=UTC))
+    anomalies_api.time_calculation.zone = ZoneInfo("Africa/Porto-Novo")
+    anomaly_id = anomalies_api.add_assisted_punch()
+
+    res = anomalies_api.client.post(f"/anomalies/{anomaly_id}/validate", json={})
+
+    assert res.status_code == 200, res.text
+    assert anomalies_api.time_calculation.sent == [
+        CalculateDailyTimeCommand(employee_id="emp2", work_date=date(2026, 10, 8))
     ]
 
 

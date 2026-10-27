@@ -2,7 +2,6 @@
 decision, followed by the recalculation of the punched employee's day."""
 
 from dataclasses import replace
-from datetime import UTC
 from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, Query, Response
@@ -79,7 +78,11 @@ async def get_anomaly_photo(
     if item.photo_key is None:
         raise NotFoundError(f"Anomaly {anomaly_id} has no photo", context=anomaly_id)
     content, content_type = await anomalies.photo_storage.get(item.photo_key)
-    return Response(content=content, media_type=content_type, headers={"Cache-Control": "private, no-store"})
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+    )
 
 
 @router.post("/{anomaly_id}/validate", response_model=AnomalyItemResponse)
@@ -125,14 +128,10 @@ async def _decide(
         )
     )
     # 2. Then the day, in a separate transaction: its failure never undoes the decision.
-    #    ponytail: UTC date; punches near local midnight may recalc the neighbouring day.
+    #    The day is the punch's date in the employee's time-profile timezone.
     try:
-        await time_calculation.send(
-            CalculateDailyTimeCommand(
-                employee_id=result.employee_id,
-                work_date=result.occured_at.astimezone(UTC).date(),
-            )
-        )
+        work_date = await time_calculation.work_date_of(result.employee_id, result.occured_at)
+        await time_calculation.send(CalculateDailyTimeCommand(employee_id=result.employee_id, work_date=work_date))
     except DomainError as exc:
         audit.warning(
             "action=RECALC_AFTER_DECISION anomaly=%s status=SKIPPED reason=%s", anomaly_id, exc.code

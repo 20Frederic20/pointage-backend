@@ -1,6 +1,7 @@
 """The time calculation context's composition root — request-scope wiring."""
 
 from dataclasses import dataclass, field
+from datetime import date, datetime
 
 from cqrs.requests.map import RequestMap
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from core.infrastructure.database import SQLAlchemyUnitOfWork
 from core.infrastructure.event_store import EventStore
 from core.infrastructure.events import EventBusEmitter
 from core.infrastructure.outbox import TransactionalOutbox
+from identity.domain import EmployeeId
 from periods.infrastructure.persistence.event_sourced_period_repository import EventSourcedPeriodRepository
 from planning.infrastructure.persistence.event_sourced_employee_schedule_repository import (
     EventSourcedEmployeeScheduleRepository,
@@ -119,6 +121,10 @@ class TimeCalculationContainer:
         raise TypeError(
             f"No time-calculation-scope wiring for handler {handler_type.__name__}"
         )
+
+    async def work_date_of(self, employee_id: str, instant: datetime) -> date:
+        """The employee's work date of ``instant``, in their time-profile timezone."""
+        return await self._time_calculation_service().work_date_of(EmployeeId(employee_id), instant)
 
     async def send(self, request):
         """Dispatch a time calculation command/query and return its result."""

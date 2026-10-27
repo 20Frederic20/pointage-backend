@@ -71,6 +71,7 @@ class AnomalyListItemDTO(DTO):
     photo_key: str | None = None
     decided_at: datetime | None = None
     decision_comment: str | None = None
+    site_name: str | None = None  # the punched employee's site assigned on the punch date
 
     @property
     def has_photo(self) -> bool:

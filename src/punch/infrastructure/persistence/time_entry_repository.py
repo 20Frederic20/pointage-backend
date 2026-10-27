@@ -54,6 +54,16 @@ class TimeEntryRepository(ITimeEntryRepository):
             )
         return _to_aggregate(row)
 
+    async def reserve_idempotency_key(self, idempotency_key: str, time_entry_id: TimeEntryId) -> None:
+        """The state table has no reservation table: refuse a key another entry holds."""
+        holder = await self._session.scalar(
+            select(TimeEntryModel.id).where(
+                TimeEntryModel.idempotency_key == idempotency_key, TimeEntryModel.id != time_entry_id.value
+            )
+        )
+        if holder is not None:
+            raise ConflictError(f"Idempotency key already used by {holder}", context=idempotency_key)
+
     async def exists(self, time_entry_id: TimeEntryId) -> bool:
         row = await self._session.scalar(
             select(TimeEntryModel.id).where(TimeEntryModel.id == time_entry_id.value)
