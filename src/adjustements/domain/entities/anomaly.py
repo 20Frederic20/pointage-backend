@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from ..errors import AnomalyAlreadyDecidedError, DecisionCommentRequiredError
+from ..errors import AnomalyAlreadyDecidedError, DecisionCommentRequiredError, DecisionCommentTooLongError
 from ..events.anomaly_events import (
     AnomalyCreated,
     AnomalyImported,
@@ -13,6 +13,8 @@ from core.domain.entity import AggregateRoot
 from core.domain.errors import ConflictError
 from identity.domain import EmployeeId, UserId
 from punch.domain import TimeEntryId
+
+MAX_DECISION_COMMENT_LENGTH = 512
 
 
 class Anomaly(AggregateRoot[AnomalyId]):
@@ -122,6 +124,7 @@ class Anomaly(AggregateRoot[AnomalyId]):
     def validate(self, *, decided_by: UserId, decided_at: datetime, comment: str | None = None) -> None:
         """Accept an open anomaly; records :class:`AnomalyValidated`."""
         self._ensure_decidable()
+        self._ensure_comment_fits(comment)
         self._raise(AnomalyValidated(self.id, decided_by=decided_by, decided_at=decided_at, comment=comment))
 
     def reject(self, *, decided_by: UserId, decided_at: datetime, comment: str) -> None:
@@ -131,7 +134,14 @@ class Anomaly(AggregateRoot[AnomalyId]):
             raise DecisionCommentRequiredError(
                 f"A comment is required to reject anomaly {self.id.value}", context=self.id.value
             )
+        self._ensure_comment_fits(comment)
         self._raise(AnomalyRejected(self.id, decided_by=decided_by, decided_at=decided_at, comment=comment))
+
+    def _ensure_comment_fits(self, comment: str | None) -> None:
+        if comment is not None and len(comment) > MAX_DECISION_COMMENT_LENGTH:
+            raise DecisionCommentTooLongError(
+                f"Decision comment exceeds {MAX_DECISION_COMMENT_LENGTH} characters", context=self.id.value
+            )
 
     def _ensure_decidable(self) -> None:
         if self._status not in (AnomalyStatus.OPEN, AnomalyStatus.IN_PROGRESS):
@@ -141,7 +151,12 @@ class Anomaly(AggregateRoot[AnomalyId]):
 
     def resolve(self, *, resolved_at: datetime) -> None:
         """``resoudre``: close an open anomaly; records :class:`AnomalyResolved`."""
-        if self._status in (AnomalyStatus.RESOLVED, AnomalyStatus.CANCELLED):
+        if self._status in (
+            AnomalyStatus.RESOLVED,
+            AnomalyStatus.CANCELLED,
+            AnomalyStatus.VALIDATED,
+            AnomalyStatus.REJECTED,
+        ):
             raise ConflictError(
                 f"Anomaly {self.id.value} is already {self._status}",
                 context=self.id.value,

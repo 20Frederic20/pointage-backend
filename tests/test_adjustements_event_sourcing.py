@@ -21,7 +21,11 @@ from adjustements.infrastructure.persistence.event_sourced_anomaly_repository im
 from adjustements.infrastructure.persistence.event_sourced_regularization_request_repository import (
     REGULARIZATION_REQUEST_EVENT_TYPES,
 )
-from adjustements.domain.errors import AnomalyAlreadyDecidedError, DecisionCommentRequiredError
+from adjustements.domain.errors import (
+    AnomalyAlreadyDecidedError,
+    DecisionCommentRequiredError,
+    DecisionCommentTooLongError,
+)
 from core.domain.errors import ConflictError
 from identity.domain import EmployeeId, UserId
 from punch.domain import TimeEntryId
@@ -212,3 +216,28 @@ def test_legacy_anomaly_payload_replays_without_employee():
     rebuilt = Anomaly.rehydrate(anomaly.id, [event])
     assert rebuilt.employee_id is None and rebuilt.assisted_by_user_id is None
     assert rebuilt.decided_by is None
+
+
+def test_reject_without_any_comment_is_refused():
+    with pytest.raises(DecisionCommentRequiredError):
+        new_assisted_anomaly().reject(decided_by=UserId.generate(), decided_at=DECIDED, comment=None)
+
+
+def test_decision_comment_is_limited_to_512_characters():
+    manager = UserId.generate()
+    for decide in ("validate", "reject"):
+        anomaly = new_assisted_anomaly()
+        with pytest.raises(DecisionCommentTooLongError):
+            getattr(anomaly, decide)(decided_by=manager, decided_at=DECIDED, comment="x" * 513)
+        assert anomaly.status == AnomalyStatus.OPEN
+        getattr(anomaly, decide)(decided_by=manager, decided_at=DECIDED, comment="x" * 512)
+        assert len(anomaly.decision_comment) == 512
+
+
+def test_decided_anomaly_cannot_be_resolved():
+    for decide in ("validate", "reject"):
+        anomaly = new_assisted_anomaly()
+        getattr(anomaly, decide)(decided_by=UserId.generate(), decided_at=DECIDED, comment="ok")
+        with pytest.raises(ConflictError):
+            anomaly.resolve(resolved_at=DECIDED + timedelta(hours=1))
+        assert anomaly.resolved_at == DECIDED

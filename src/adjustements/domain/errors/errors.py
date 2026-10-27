@@ -15,3 +15,11 @@ class DecisionCommentRequiredError(DomainError):
     code = "DECISION_COMMENT_REQUIRED"
     http_status = 422
     severity = Severity.WARNING
+
+
+class DecisionCommentTooLongError(DomainError):
+    """Raised when a decision comment exceeds the stored maximum length."""
+
+    code = "DECISION_COMMENT_TOO_LONG"
+    http_status = 422
+    severity = Severity.WARNING
