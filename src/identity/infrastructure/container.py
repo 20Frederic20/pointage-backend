@@ -266,7 +266,9 @@ class UsersContainer:
             )
         if handler_type is GetEmployeeAssignmentsHandler:
             return GetEmployeeAssignmentsHandler(
-                employee_assignment_repository=self.employee_assignment_read_repository
+                employee_assignment_repository=self.employee_assignment_read_repository,
+                site_repository=self.site_read_repository,
+                directory_repository=self.directory_read_repository,
             )
         if handler_type is GetEmployeeByEmployeeNumberHandler:
             return GetEmployeeByEmployeeNumberHandler(employee_repository=self.employee_read_repository)

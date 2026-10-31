@@ -110,3 +110,59 @@ class EmployeeAlreadyInactiveError(ConflictError):
     code = "EMPLOYEE_ALREADY_INACTIVE"
     http_status = 409
     severity = Severity.WARNING
+
+
+class AssignmentInPastError(DomainError):
+    """Raised when an assignment would start before today."""
+
+    code = "ASSIGNMENT_IN_PAST"
+    http_status = 422
+    severity = Severity.WARNING
+
+
+class FutureAssignmentExistsError(DomainError):
+    """Raised when a transfer would overwrite an assignment already scheduled later."""
+
+    code = "FUTURE_ASSIGNMENT_EXISTS"
+    http_status = 409
+    severity = Severity.WARNING
+
+
+class DirectoryOutsideCompanyError(DomainError):
+    """Raised when an assignment targets a directory outside the employee's company."""
+
+    code = "DIRECTORY_OUTSIDE_COMPANY"
+    http_status = 422
+    severity = Severity.WARNING
+
+
+class EmployeeInactiveError(DomainError):
+    """Raised when an inactive (deactivated) employee record is asked to punch or be assigned."""
+
+    code = "EMPLOYEE_INACTIVE"
+    http_status = 409
+    severity = Severity.WARNING
+
+
+class RoleCeilingError(DomainError):
+    """Raised when an actor grants, edits or changes a role above their own, or their own role."""
+
+    code = "ROLE_CEILING"
+    http_status = 403
+    severity = Severity.WARNING
+
+
+class SelfDeactivationError(DomainError):
+    """Raised when an actor tries to deactivate one of their own employee records."""
+
+    code = "SELF_DEACTIVATION"
+    http_status = 403
+    severity = Severity.WARNING
+
+
+class AlreadyActiveInCompanyError(ConflictError):
+    """Raised when a person would hold two active employee records in the same company."""
+
+    code = "ALREADY_ACTIVE_IN_COMPANY"
+    http_status = 409
+    severity = Severity.WARNING

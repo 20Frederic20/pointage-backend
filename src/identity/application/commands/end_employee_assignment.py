@@ -10,3 +10,6 @@ class EndEmployeeAssignmentCommand(Command):
 
     employee_assignment_id: str
     end_date: date
+    # Who acts (from the access token): responsible roles only, capped by rank.
+    actor_user_id: str = ""
+    actor_role: str = ""

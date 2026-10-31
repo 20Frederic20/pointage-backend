@@ -12,6 +12,7 @@ from ...domain.repositories import IEmployeeAssignmentRepository
 from ...domain.value_objects.ids import EmployeeAssignmentId
 from ..commands import EndEmployeeAssignmentCommand
 from ..dtos import EmployeeAssignmentDTO
+from ..services import ensure_responsible
 
 
 class EndEmployeeAssignmentHandler(CommandHandler[EndEmployeeAssignmentCommand, EmployeeAssignmentDTO]):
@@ -28,6 +29,7 @@ class EndEmployeeAssignmentHandler(CommandHandler[EndEmployeeAssignmentCommand, 
     async def _execute(
         self, request: EndEmployeeAssignmentCommand
     ) -> tuple[EmployeeAssignmentDTO, Sequence[AggregateRoot]]:
+        ensure_responsible(request.actor_role)
         assignment = await self._assignments.get_by_id(EmployeeAssignmentId(request.employee_assignment_id))
         if await self._assignments.exists_overlapping(
             assignment.employee_id, assignment.start_date, request.end_date, excluding=assignment.id

@@ -204,5 +204,7 @@ class EmployeeAssignmentResponse(_CamelSchema):
     site_id: str = Field(alias="siteId")
     start_date: date = Field(alias="startDate")
     end_date: date | None = Field(default=None, alias="endDate")
+    site_name: str | None = Field(default=None, alias="siteName")
+    directory_name: str | None = Field(default=None, alias="directoryName")
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")

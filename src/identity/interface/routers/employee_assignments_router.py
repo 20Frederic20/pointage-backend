@@ -2,6 +2,10 @@
 
 from fastapi import APIRouter, Depends, status
 
+from auth.application.dtos import PrincipalDTO
+from auth.interface import require_role
+from identity.domain import Role
+
 from identity.application.commands import AssignEmployeeCommand, EndEmployeeAssignmentCommand
 from identity.application.queries import GetEmployeeAssignmentsQuery
 from identity.infrastructure import UsersContainer
@@ -14,6 +18,8 @@ from identity.interface.schemas import (
 from ..dependencies import get_users
 
 router = APIRouter(prefix="/employee-assignments", tags=["employee-assignments"])
+
+_responsible = require_role(Role.MANAGER, Role.HR, Role.PAYROLL, Role.ADMIN)
 
 
 def _assignment_response(dto) -> EmployeeAssignmentResponse:
@@ -28,8 +34,11 @@ def _assignment_response(dto) -> EmployeeAssignmentResponse:
 )
 async def assign(
     payload: AssignEmployeeRequest,
+    principal: PrincipalDTO = Depends(_responsible),  # noqa: B008
     users: UsersContainer = Depends(get_users),  # noqa: B008
 ) -> EmployeeAssignmentResponse:
+    """A transfer when an assignment is running: it ends the day before (or is
+    cancelled when it starts the same day)."""
     dto = await users.send(
         AssignEmployeeCommand(
             employee_id=payload.employee_id,
@@ -37,6 +46,8 @@ async def assign(
             site_id=payload.site_id,
             start_date=payload.start_date,
             end_date=payload.end_date,
+            actor_user_id=principal.user_id,
+            actor_role=principal.role,
         )
     )
     return _assignment_response(dto)
@@ -56,11 +67,15 @@ async def list_for_employee(
 async def end(
     employee_assignment_id: str,
     payload: EndEmployeeAssignmentRequest,
+    principal: PrincipalDTO = Depends(_responsible),  # noqa: B008
     users: UsersContainer = Depends(get_users),  # noqa: B008
 ) -> EmployeeAssignmentResponse:
     dto = await users.send(
         EndEmployeeAssignmentCommand(
-            employee_assignment_id=employee_assignment_id, end_date=payload.end_date
+            employee_assignment_id=employee_assignment_id,
+            end_date=payload.end_date,
+            actor_user_id=principal.user_id,
+            actor_role=principal.role,
         )
     )
     return _assignment_response(dto)

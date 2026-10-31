@@ -5,6 +5,13 @@ import path — ``socialcrm.users.domain.errors`` — short.)
 """
 
 from .errors import (
+    AlreadyActiveInCompanyError,
+    AssignmentInPastError,
+    DirectoryOutsideCompanyError,
+    EmployeeInactiveError,
+    FutureAssignmentExistsError,
+    RoleCeilingError,
+    SelfDeactivationError,
     DirectoryAlreadyExistsError,
     DirectoryHasNoSiteError,
     EmailAlreadyRegisteredError,
@@ -21,6 +28,13 @@ from .errors import (
 )
 
 __all__ = [
+    "AlreadyActiveInCompanyError",
+    "AssignmentInPastError",
+    "DirectoryOutsideCompanyError",
+    "EmployeeInactiveError",
+    "FutureAssignmentExistsError",
+    "RoleCeilingError",
+    "SelfDeactivationError",
     "DirectoryAlreadyExistsError",
     "DirectoryHasNoSiteError",
     "EmailAlreadyRegisteredError",
