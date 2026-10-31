@@ -6,11 +6,13 @@ from .create_employee import CreateEmployeeCommand
 from .create_site import CreateSiteCommand
 from .deactivate_site import DeactivateSiteCommand
 from .deactivate_user import DeactivateUserCommand
+from .edit_employee import EditEmployeeCommand
 from .end_employee_assignment import EndEmployeeAssignmentCommand
 from .make_site_principal import MakeSitePrincipalCommand
 from .onboard_employee import OnboardEmployeeCommand
 from .record_user_activity import RecordUserActivityCommand
 from .register_user import RegisterUserCommand
+from .set_employee_active import SetEmployeeActiveCommand
 from .update_directory import UpdateDirectoryCommand
 from .update_employee import UpdateEmployeeCommand
 from .update_user_profile import UpdateUserProfileCommand
@@ -24,11 +26,13 @@ __all__ = [
     "CreateSiteCommand",
     "DeactivateSiteCommand",
     "DeactivateUserCommand",
+    "EditEmployeeCommand",
     "EndEmployeeAssignmentCommand",
     "MakeSitePrincipalCommand",
     "OnboardEmployeeCommand",
     "RecordUserActivityCommand",
     "RegisterUserCommand",
+    "SetEmployeeActiveCommand",
     "UpdateDirectoryCommand",
     "UpdateEmployeeCommand",
     "UpdateUserProfileCommand",

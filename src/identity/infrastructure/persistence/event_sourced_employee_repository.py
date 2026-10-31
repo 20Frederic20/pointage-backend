@@ -49,11 +49,15 @@ class EventSourcedEmployeeRepository(IEmployeeWriteRepository):
     async def exists_by_employee_number(self, employee_number: str) -> bool:
         return await self._store.owner(EMPLOYEE_NUMBER_KEY, employee_number) is not None
 
-    async def find_by_user_id(self, user_id: UserId) -> Employee | None:
-        # employees.user_id is not unique: prefer the active, most recent record.
+    async def find_all_by_user_id(self, user_id: UserId) -> list[Employee]:
+        """Every record of a person: one per company they work (or worked) for."""
         ids = await self._store.find_stream_ids(EMPLOYEE_STREAM, {"user_id": user_id.value})
         streams = await self._store.load_streams(ids, EMPLOYEE_EVENT_TYPES)
-        employees = [Employee.rehydrate(EmployeeId(stream_id), events) for stream_id, events in streams.items()]
+        return [Employee.rehydrate(EmployeeId(stream_id), events) for stream_id, events in streams.items()]
+
+    async def find_by_user_id(self, user_id: UserId) -> Employee | None:
+        # employees.user_id is not unique: prefer the active, most recent record.
+        employees = await self.find_all_by_user_id(user_id)
         if not employees:
             return None
         return max(employees, key=lambda employee: (employee.is_active, employee.created_at))

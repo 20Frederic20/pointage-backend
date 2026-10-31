@@ -78,6 +78,10 @@ from ..application import (
     RegisterUserHandler,
     UpdateEmployeeCommand,
     UpdateEmployeeHandler,
+    EditEmployeeCommand,
+    EditEmployeeHandler,
+    SetEmployeeActiveCommand,
+    SetEmployeeActiveHandler,
     UpdateUserProfileCommand,
     UpdateUserProfileHandler,
 )
@@ -129,6 +133,8 @@ class UsersContainer:
         request_map.bind(CreateEmployeeCommand, CreateEmployeeHandler)
         request_map.bind(OnboardEmployeeCommand, OnboardEmployeeHandler)
         request_map.bind(UpdateEmployeeCommand, UpdateEmployeeHandler)
+        request_map.bind(EditEmployeeCommand, EditEmployeeHandler)
+        request_map.bind(SetEmployeeActiveCommand, SetEmployeeActiveHandler)
         request_map.bind(CreateSiteCommand, CreateSiteHandler)
         request_map.bind(ActivateSiteCommand, ActivateSiteHandler)
         request_map.bind(DeactivateSiteCommand, DeactivateSiteHandler)
@@ -203,6 +209,19 @@ class UsersContainer:
                 directory_repository=self.directory_repository,
                 site_repository=self.site_repository,
                 password_hasher=self.password_hasher,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is EditEmployeeHandler:
+            return EditEmployeeHandler(
+                unit_of_work=self.unit_of_work,
+                employee_repository=self.employee_repository,
+                user_repository=self.user_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is SetEmployeeActiveHandler:
+            return SetEmployeeActiveHandler(
+                unit_of_work=self.unit_of_work,
+                employee_repository=self.employee_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is UpdateEmployeeHandler:

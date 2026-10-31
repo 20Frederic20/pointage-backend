@@ -5,6 +5,7 @@ from .create_employee_handler import CreateEmployeeHandler
 from .create_site_handler import CreateSiteHandler
 from .deactivate_site_handler import DeactivateSiteHandler
 from .deactivate_user_handler import DeactivateUserHandler
+from .edit_employee_handler import EditEmployeeHandler
 from .end_employee_assignment_handler import EndEmployeeAssignmentHandler
 from .get_directories_handler import GetDirectoriesHandler
 from .get_directory_by_id_handler import GetDirectoryByIdHandler
@@ -20,6 +21,7 @@ from .make_site_principal_handler import MakeSitePrincipalHandler
 from .onboard_employee_handler import OnboardEmployeeHandler
 from .record_user_activity_handler import RecordUserActivityHandler
 from .register_user_handler import RegisterUserHandler
+from .set_employee_active_handler import SetEmployeeActiveHandler
 from .update_employee_handler import UpdateEmployeeHandler
 from .update_user_profile_handler import UpdateUserProfileHandler
 
@@ -31,6 +33,7 @@ __all__ = [
     "CreateSiteHandler",
     "DeactivateSiteHandler",
     "DeactivateUserHandler",
+    "EditEmployeeHandler",
     "EndEmployeeAssignmentHandler",
     "GetDirectoriesHandler",
     "GetDirectoryByIdHandler",
@@ -46,6 +49,7 @@ __all__ = [
     "OnboardEmployeeHandler",
     "RecordUserActivityHandler",
     "RegisterUserHandler",
+    "SetEmployeeActiveHandler",
     "UpdateEmployeeHandler",
     "UpdateUserProfileHandler",
 ]

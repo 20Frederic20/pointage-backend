@@ -17,6 +17,8 @@ from .commands import (
     RegisterUserCommand,
     UpdateDirectoryCommand,
     UpdateEmployeeCommand,
+    EditEmployeeCommand,
+    SetEmployeeActiveCommand,
     UpdateUserProfileCommand,
 )
 from .consumers import (
@@ -61,6 +63,8 @@ from .handlers import (
     RecordUserActivityHandler,
     RegisterUserHandler,
     UpdateEmployeeHandler,
+    EditEmployeeHandler,
+    SetEmployeeActiveHandler,
     UpdateUserProfileHandler,
 )
 from .notifications import USERS_EVENT_MAPPERS
@@ -138,6 +142,10 @@ __all__ = [
     "SiteDTO",
     "UpdateDirectoryCommand",
     "UpdateEmployeeCommand",
+    "EditEmployeeCommand",
+    "SetEmployeeActiveCommand",
+    "EditEmployeeHandler",
+    "SetEmployeeActiveHandler",
     "UpdateEmployeeHandler",
     "UpdateUserProfileCommand",
     "UpdateUserProfileHandler",

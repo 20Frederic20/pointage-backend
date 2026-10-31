@@ -73,3 +73,38 @@ def test_onboard_validates_the_whole_form(identity_api):
     for field, value in (("email", "not-an-email"), ("employee_number", "EMP1"), ("password", "short")):
         res = identity_api.client.post("/employees/onboard", json=ONBOARD | {field: value})
         assert res.status_code == 422, field
+
+
+def _seed_record(api, role=Role.EMPLOYEE):
+    from identity.domain import DirectoryId, EmployeeId, UserId
+    from identity.domain.entities import Employee, User
+
+    api.side.users.add(User(UserId("usr1"), email="a@pointage.bj", password_hash=None, role=role,
+                            first_name="Ana", last_name="Dossou", is_active=True))
+    api.side.employees.add(Employee(EmployeeId("emp1"), user_id=UserId("usr1"), employee_number="EMP0000001",
+                                    is_active=True, role=role, company_directory_id=DirectoryId("dir1")))
+
+
+def test_employee_actions_are_for_responsible_roles(identity_write_api):
+    _seed_record(identity_write_api)
+    identity_write_api.as_("EMPLOYEE")
+    client = identity_write_api.client
+    assert client.patch("/employees/emp1", json={"phone": "0197000000"}).status_code == 403
+    assert client.post("/employees/emp1/deactivate").status_code == 403
+    assert client.post("/employees/emp1/activate").status_code == 403
+
+
+def test_patch_returns_new_phone_and_role(identity_write_api):
+    _seed_record(identity_write_api)
+    res = identity_write_api.client.patch("/employees/emp1", json={"phone": "0197000000", "role": "MANAGER",
+                                                                    "firstName": "Awa"})
+    assert res.status_code == 200
+    assert (res.json()["phone"], res.json()["role"]) == ("0197000000", "MANAGER")
+
+
+def test_deactivate_then_activate_routes(identity_write_api):
+    _seed_record(identity_write_api)
+    assert identity_write_api.client.post("/employees/emp1/deactivate").json()["isActive"] is False
+    res = identity_write_api.client.post("/employees/emp1/deactivate")
+    assert (res.status_code, res.json()["code"]) == (409, "EMPLOYEE_ALREADY_INACTIVE")
+    assert identity_write_api.client.post("/employees/emp1/activate").json()["isActive"] is True

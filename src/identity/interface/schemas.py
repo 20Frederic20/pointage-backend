@@ -88,9 +88,12 @@ class UpdateProfileRequest(_CamelSchema):
 
 
 class UpdateEmployeeRequest(_CamelSchema):
+    """Edit an employee: names (account-wide), phone and role (per company); omitted = untouched."""
 
-    employee_number: str | None = Field(default=None, min_length=10, max_length=20)
+    first_name: str | None = Field(default=None, min_length=1, max_length=255, alias="firstName")
+    last_name: str | None = Field(default=None, min_length=1, max_length=255, alias="lastName")
     phone: str | None = Field(default=None, min_length=10, max_length=20)
+    role: Role | None = None
 
 
 class CreateDirectoryRequest(_CamelSchema):
