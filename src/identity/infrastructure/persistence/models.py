@@ -95,4 +95,5 @@ class EmployeeAssignmentModel(BaseModel):
     )
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    cancelled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

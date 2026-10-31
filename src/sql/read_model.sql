@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS employee_assignments (
     site_id character varying(32) NOT NULL,
     start_date date NOT NULL,
     end_date date,
+    cancelled boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     version_id integer DEFAULT 1 NOT NULL,

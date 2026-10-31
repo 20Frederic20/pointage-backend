@@ -1,4 +1,9 @@
-from .employee_assignment_events import EmployeeAssigned, EmployeeAssignmentEnded, EmployeeAssignmentImported
+from .employee_assignment_events import (
+    EmployeeAssigned,
+    EmployeeAssignmentCancelled,
+    EmployeeAssignmentEnded,
+    EmployeeAssignmentImported,
+)
 from .employee_events import (
     EmployeeActivated,
     EmployeeCompanySet,
@@ -35,6 +40,7 @@ __all__ = [
     "DirectoryUpdated",
     "EmployeeActivated",
     "EmployeeAssigned",
+    "EmployeeAssignmentCancelled",
     "EmployeeAssignmentEnded",
     "EmployeeAssignmentImported",
     "EmployeeCompanySet",

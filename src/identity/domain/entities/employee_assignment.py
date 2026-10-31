@@ -4,10 +4,12 @@ from datetime import date, datetime
 from typing import Self
 
 from core.domain.entity import AggregateRoot
+from core.domain.errors import ConflictError
 
 from ..errors.errors import InvalidEmployeeAssignmentDatesError
 from ..events.employee_assignment_events import (
     EmployeeAssigned,
+    EmployeeAssignmentCancelled,
     EmployeeAssignmentEnded,
     EmployeeAssignmentImported,
 )
@@ -23,7 +25,7 @@ class EmployeeAssignment(AggregateRoot[EmployeeAssignmentId]):
     against.
     """
 
-    __slots__ = ("_directory_id", "_employee_id", "_end_date", "_site_id", "_start_date")
+    __slots__ = ("_cancelled", "_directory_id", "_employee_id", "_end_date", "_site_id", "_start_date")
 
     def __init__(
         self,
@@ -34,6 +36,7 @@ class EmployeeAssignment(AggregateRoot[EmployeeAssignmentId]):
         site_id: SiteId,
         start_date: date,
         end_date: date | None = None,
+        cancelled: bool = False,
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
         version: int = 0,
@@ -47,6 +50,7 @@ class EmployeeAssignment(AggregateRoot[EmployeeAssignmentId]):
         self._site_id = site_id
         self._start_date = start_date
         self._end_date = end_date
+        self._cancelled = cancelled
 
     @classmethod
     def assign(
@@ -75,13 +79,19 @@ class EmployeeAssignment(AggregateRoot[EmployeeAssignmentId]):
         return assignment
 
     def is_active_on(self, day: date) -> bool:
-        """``estActive(date)``."""
-        return self._start_date <= day and (self._end_date is None or day <= self._end_date)
+        """``estActive(date)``: never for a cancelled assignment."""
+        return not self._cancelled and self._start_date <= day and (self._end_date is None or day <= self._end_date)
 
     def end(self, end_date: date) -> None:
         """``terminer``: the assignment's last day is ``end_date``."""
         _check_dates(self._start_date, end_date, self.id)
         self._raise(EmployeeAssignmentEnded(self.id, end_date=end_date))
+
+    def cancel(self) -> None:
+        """A transfer on the same start day replaces this assignment."""
+        if self._cancelled:
+            raise ConflictError(f"Assignment {self.id.value} is already cancelled", context=self.id.value)
+        self._raise(EmployeeAssignmentCancelled(self.id))
 
     def _apply(self, event) -> None:
         match event:
@@ -91,10 +101,13 @@ class EmployeeAssignment(AggregateRoot[EmployeeAssignmentId]):
                 self._site_id = event.site_id
                 self._start_date = event.start_date
                 self._end_date = event.end_date
+                self._cancelled = False
                 if isinstance(event, EmployeeAssignmentImported):
                     self._created_at = event.created_at
             case EmployeeAssignmentEnded():
                 self._end_date = event.end_date
+            case EmployeeAssignmentCancelled():
+                self._cancelled = True
             case _:
                 super()._apply(event)
 
@@ -117,6 +130,10 @@ class EmployeeAssignment(AggregateRoot[EmployeeAssignmentId]):
     @property
     def end_date(self) -> date | None:
         return self._end_date
+
+    @property
+    def is_cancelled(self) -> bool:
+        return self._cancelled
 
 
 def _check_dates(

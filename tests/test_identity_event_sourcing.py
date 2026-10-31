@@ -188,3 +188,26 @@ def test_legacy_employee_created_payload_has_no_company():
     del payload["company_directory_id"]
     legacy = Employee.rehydrate(employee.id, [EmployeeCreated.from_payload(payload)])
     assert legacy.company_directory_id is None
+
+
+def test_cancelled_assignment_replays_and_is_never_active():
+    assignment = EmployeeAssignment.assign(EmployeeAssignmentId.generate(), employee_id=EmployeeId.generate(),
+                                           directory_id=DirectoryId("dir1"), site_id=SiteId("site1"),
+                                           start_date=date(2026, 11, 2))
+    assignment.cancel()
+    replayed = _replay(assignment, EMPLOYEE_ASSIGNMENT_EVENT_TYPES)
+    assert replayed.is_cancelled
+    assert not replayed.is_active_on(date(2026, 11, 2))
+
+
+def test_cancel_twice_is_conflict():
+    import pytest
+
+    from core.domain.errors import ConflictError
+
+    assignment = EmployeeAssignment.assign(EmployeeAssignmentId.generate(), employee_id=EmployeeId.generate(),
+                                           directory_id=DirectoryId("dir1"), site_id=SiteId("site1"),
+                                           start_date=date(2026, 11, 2))
+    assignment.cancel()
+    with pytest.raises(ConflictError):
+        assignment.cancel()

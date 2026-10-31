@@ -7,3 +7,6 @@
 
 -- employees: the company (root directory) of each record.
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS company_directory_id character varying(32);
+
+-- employee_assignments: an assignment replaced by a same-day transfer.
+ALTER TABLE employee_assignments ADD COLUMN IF NOT EXISTS cancelled boolean DEFAULT false NOT NULL;

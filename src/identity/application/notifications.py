@@ -20,6 +20,7 @@ from ..domain.events import (
     DirectoryUpdated,
     EmployeeAssigned,
     EmployeeAssignmentEnded,
+    EmployeeAssignmentCancelled,
     EmployeeAssignmentImported,
     EmployeeCreated,
     EmployeeImported,
@@ -240,7 +241,7 @@ def to_employee_assigned(event: EmployeeAssigned) -> EmployeeAssignedNotificatio
     )
 
 
-def to_employee_assignment_ended(event: EmployeeAssignmentEnded) -> EmployeeAssignmentEndedNotification:
+def to_employee_assignment_ended(event: EmployeeAssignmentEnded | EmployeeAssignmentCancelled) -> EmployeeAssignmentEndedNotification:
     return _notification(
         EmployeeAssignmentEndedNotification,
         event,
@@ -260,6 +261,7 @@ USERS_EVENT_MAPPERS: dict[type, object] = {
     SiteMadePrincipal: to_site_made_principal,
     EmployeeAssigned: to_employee_assigned,
     EmployeeAssignmentEnded: to_employee_assignment_ended,
+    EmployeeAssignmentCancelled: to_employee_assignment_ended,
     SiteMadeAnnex: to_site_made_annex,
     DirectoryUpdated: to_directory_updated,
     UserProfileUpdated: to_user_profile_updated,
@@ -291,6 +293,7 @@ USERS_EVENT_REGISTRY: dict[str, type] = {
     "users.site.made_principal": SiteMadePrincipalNotification,
     "users.employee_assignment.created": EmployeeAssignedNotification,
     "users.employee_assignment.ended": EmployeeAssignmentEndedNotification,
+    "users.employee_assignment.cancelled": EmployeeAssignmentEndedNotification,
     "users.site.made_annex": SiteMadeAnnexNotification,
     "users.directory.updated": DirectoryUpdatedNotification,
     "users.user.profile_updated": UserProfileUpdatedNotification,

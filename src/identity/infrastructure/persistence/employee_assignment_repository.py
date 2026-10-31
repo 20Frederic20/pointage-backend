@@ -57,7 +57,9 @@ class EmployeeAssignmentRepository(IEmployeeAssignmentRepository):
         excluding: EmployeeAssignmentId | None = None,
     ) -> bool:
         stmt = select(EmployeeAssignmentModel.id).where(
-            EmployeeAssignmentModel.employee_id == employee_id.value, *_overlaps(start_date, end_date)
+            EmployeeAssignmentModel.employee_id == employee_id.value,
+            EmployeeAssignmentModel.cancelled.is_(False),
+            *_overlaps(start_date, end_date),
         )
         if excluding is not None:
             stmt = stmt.where(EmployeeAssignmentModel.id != excluding.value)
@@ -66,7 +68,11 @@ class EmployeeAssignmentRepository(IEmployeeAssignmentRepository):
     async def find_active(self, employee_id: EmployeeId, day: date) -> EmployeeAssignment | None:
         row = await self._session.scalar(
             select(EmployeeAssignmentModel)
-            .where(EmployeeAssignmentModel.employee_id == employee_id.value, *_overlaps(day, day))
+            .where(
+                EmployeeAssignmentModel.employee_id == employee_id.value,
+                EmployeeAssignmentModel.cancelled.is_(False),
+                *_overlaps(day, day),
+            )
             .limit(1)
         )
         return self._to_aggregate(row) if row is not None else None
@@ -74,7 +80,7 @@ class EmployeeAssignmentRepository(IEmployeeAssignmentRepository):
     async def find_by_employee(self, employee_id: EmployeeId) -> list[EmployeeAssignment]:
         rows = await self._session.scalars(
             select(EmployeeAssignmentModel)
-            .where(EmployeeAssignmentModel.employee_id == employee_id.value)
+            .where(EmployeeAssignmentModel.employee_id == employee_id.value, EmployeeAssignmentModel.cancelled.is_(False))
             .order_by(EmployeeAssignmentModel.start_date.desc())
         )
         return [self._to_aggregate(row) for row in rows.all()]
@@ -103,6 +109,7 @@ class EmployeeAssignmentRepository(IEmployeeAssignmentRepository):
                     site_id=employee_assignment.site_id.value,
                     start_date=employee_assignment.start_date,
                     end_date=employee_assignment.end_date,
+                    cancelled=employee_assignment.is_cancelled,
                     created_at=employee_assignment.created_at or datetime.now(UTC),
                     updated_at=employee_assignment.updated_at or datetime.now(UTC),
                     version_id=1,
@@ -121,6 +128,7 @@ class EmployeeAssignmentRepository(IEmployeeAssignmentRepository):
             .where(EmployeeAssignmentModel.version_id == employee_assignment.version)
             .values(
                 end_date=employee_assignment.end_date,
+                cancelled=employee_assignment.is_cancelled,
                 updated_at=employee_assignment.updated_at or datetime.now(UTC),
                 version_id=employee_assignment.version + 1,
             )
@@ -140,6 +148,7 @@ class EmployeeAssignmentRepository(IEmployeeAssignmentRepository):
             site_id=SiteId(row.site_id),
             start_date=row.start_date,
             end_date=row.end_date,
+            cancelled=row.cancelled,
             created_at=row.created_at,
             updated_at=row.updated_at,
             version=row.version_id,
