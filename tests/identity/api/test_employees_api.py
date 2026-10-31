@@ -116,3 +116,27 @@ def test_onboard_response_says_whether_the_account_was_reused(identity_write_api
     body = ONBOARD | {"directory_id": "dir1", "assignment_start_date": datetime.now(UTC).date().isoformat()}
     first = identity_write_api.client.post("/employees/onboard", json=body)
     assert (first.status_code, first.json()["accountReused"]) == (201, False)
+
+
+def test_list_and_detail_include_names_company_and_current_site(identity_write_api):
+    from datetime import UTC, datetime
+
+    from identity.domain import DirectoryId, EmployeeAssignmentId, EmployeeId, SiteId, UserId
+    from identity.domain.entities import Employee, EmployeeAssignment
+
+    _seed_record(identity_write_api)
+    side = identity_write_api.side
+    side.assignments.add(EmployeeAssignment(EmployeeAssignmentId("asg1"), employee_id=EmployeeId("emp1"),
+                                            directory_id=DirectoryId("dir2"), site_id=SiteId("site2"),
+                                            start_date=datetime.now(UTC).date()))
+    side.employees.add(Employee(EmployeeId("emp2"), user_id=UserId("usr1"), employee_number="EMP0000002",
+                                is_active=True, company_directory_id=None))
+
+    detail = identity_write_api.client.get("/employees/emp1").json()
+    assert (detail["firstName"], detail["lastName"], detail["companyName"]) == ("Ana", "Dossou", "Société R")
+    assert (detail["currentSiteId"], detail["currentSiteName"], detail["currentAssignmentEndDate"]) == (
+        "site2", "Site 2", None)
+
+    bare = identity_write_api.client.get("/employees/emp2").json()
+    assert (bare["companyName"], bare["currentSiteName"]) == (None, None)
+    assert identity_write_api.client.get("/employees").status_code == 200

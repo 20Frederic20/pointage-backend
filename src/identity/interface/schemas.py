@@ -162,6 +162,12 @@ class EmployeeResponse(_CamelSchema):
     user_id: str = Field(alias="userId")
     company_directory_id: str | None = Field(default=None, alias="companyDirectoryId")
     account_reused: bool = Field(default=False, alias="accountReused")
+    first_name: str | None = Field(default=None, alias="firstName")
+    last_name: str | None = Field(default=None, alias="lastName")
+    company_name: str | None = Field(default=None, alias="companyName")
+    current_site_id: str | None = Field(default=None, alias="currentSiteId")
+    current_site_name: str | None = Field(default=None, alias="currentSiteName")
+    current_assignment_end_date: date | None = Field(default=None, alias="currentAssignmentEndDate")
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
 

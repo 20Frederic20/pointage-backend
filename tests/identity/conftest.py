@@ -178,6 +178,12 @@ class InMemoryEmployees(InMemoryWriteRepository):
     async def find_by_employee_number(self, number):
         return next((e for e in self.items.values() if e.employee_number == number), None)
 
+    async def find(self, spec=None, *, limit=50, offset=0):
+        return [e for e in self.items.values() if spec is None or spec.is_satisfied_by(e)][offset : offset + limit]
+
+    async def count(self, spec=None):
+        return len(await self.find(spec, limit=10**9))
+
 
 class InMemoryAssignments(InMemoryWriteRepository):
     def __init__(self):

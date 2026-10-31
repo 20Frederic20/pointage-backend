@@ -27,6 +27,7 @@ from identity.application.handlers.create_directory_handler import (
     CreateDirectoryHandler,
 )
 from identity.application.handlers.get_employees_handler import GetEmployeesHandler
+from identity.application.services import EmployeeEnricher
 from identity.infrastructure.persistence.employee_repository import EmployeeRepository
 
 from ..application import (
@@ -164,6 +165,14 @@ class UsersContainer:
             event_emitter=EventBusEmitter(self.event_bus),
         )
 
+    def _enricher(self) -> EmployeeEnricher:
+        return EmployeeEnricher(
+            user_repository=self.user_read_repository,
+            directory_repository=self.directory_read_repository,
+            employee_assignment_repository=self.employee_assignment_read_repository,
+            site_repository=self.site_read_repository,
+        )
+
     def _resolve_handler(self, handler_type: type):
         """Build a handler bound to this request scope."""
         if handler_type is RegisterUserHandler:
@@ -232,10 +241,12 @@ class UsersContainer:
             )
         if handler_type is GetEmployeesHandler:
             return GetEmployeesHandler(
-                employee_repository=self.employee_read_repository
+                employee_repository=self.employee_read_repository, enricher=self._enricher()
             )
         if handler_type is GetEmployeeByIdHandler:
-            return GetEmployeeByIdHandler(employee_repository=self.employee_read_repository)
+            return GetEmployeeByIdHandler(
+                employee_repository=self.employee_read_repository, enricher=self._enricher()
+            )
         if handler_type is CreateSiteHandler:
             return CreateSiteHandler(
                 unit_of_work=self.unit_of_work,
