@@ -1,5 +1,13 @@
 from .employee_assignment_events import EmployeeAssigned, EmployeeAssignmentEnded, EmployeeAssignmentImported
-from .employee_events import EmployeeCreated, EmployeeImported, EmployeeUpdated
+from .employee_events import (
+    EmployeeActivated,
+    EmployeeCompanySet,
+    EmployeeCreated,
+    EmployeeDeactivated,
+    EmployeeImported,
+    EmployeeRoleChanged,
+    EmployeeUpdated,
+)
 from .site_events import (
     SiteActivated,
     SiteCreated,
@@ -25,11 +33,15 @@ __all__ = [
     "DirectoryCreated",
     "DirectoryImported",
     "DirectoryUpdated",
+    "EmployeeActivated",
     "EmployeeAssigned",
     "EmployeeAssignmentEnded",
     "EmployeeAssignmentImported",
+    "EmployeeCompanySet",
     "EmployeeCreated",
+    "EmployeeDeactivated",
     "EmployeeImported",
+    "EmployeeRoleChanged",
     "EmployeeUpdated",
     "SiteActivated",
     "SiteCreated",

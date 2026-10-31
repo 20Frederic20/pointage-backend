@@ -94,3 +94,19 @@ class PrincipalSiteCannotBeDeactivatedError(DomainError):
     code = "PRINCIPAL_SITE_CANNOT_BE_DEACTIVATED"
     http_status = 409
     severity = Severity.WARNING
+
+
+class EmployeeAlreadyActiveError(ConflictError):
+    """Raised when reactivating an employee record that is already active."""
+
+    code = "EMPLOYEE_ALREADY_ACTIVE"
+    http_status = 409
+    severity = Severity.WARNING
+
+
+class EmployeeAlreadyInactiveError(ConflictError):
+    """Raised when deactivating an employee record that is already inactive."""
+
+    code = "EMPLOYEE_ALREADY_INACTIVE"
+    http_status = 409
+    severity = Severity.WARNING

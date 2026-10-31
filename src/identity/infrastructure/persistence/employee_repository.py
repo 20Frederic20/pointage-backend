@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.domain.errors import ConflictError, NotFoundError
 from core.domain.specifications import Specification
-from identity.domain import EmployeeId, UserId
+from identity.domain import DirectoryId, EmployeeId, UserId
 from identity.domain.entities import Employee
 from identity.domain.repositories.employee_repository import IemployeeReadRepository
 from identity.infrastructure.persistence import EmployeeModel
@@ -82,6 +82,7 @@ class EmployeeRepository(IemployeeReadRepository):
                     role=employee.role,
                     phone=employee.phone,
                     is_active=employee.is_active,
+                    company_directory_id=_company_value(employee),
                     # the domain owns timestamps at insert (single source of
                     # truth — the row stores what the aggregate says)
                     created_at=employee.created_at or datetime.now(UTC),
@@ -106,6 +107,7 @@ class EmployeeRepository(IemployeeReadRepository):
                 role=employee.role,
                 phone=employee.phone,
                 is_active=employee.is_active,
+                company_directory_id=_company_value(employee),
                 updated_at=employee.updated_at or datetime.now(UTC),
                 version_id=employee.version + 1,
             )
@@ -125,7 +127,12 @@ class EmployeeRepository(IemployeeReadRepository):
             role=row.role,
             phone=row.phone,
             is_active=row.is_active,
+            company_directory_id=DirectoryId(row.company_directory_id) if row.company_directory_id else None,
             created_at=row.created_at,
             updated_at=row.updated_at,
             version=row.version_id,
         )
+
+
+def _company_value(employee: Employee) -> str | None:
+    return employee.company_directory_id.value if employee.company_directory_id is not None else None

@@ -5,7 +5,15 @@ from core.infrastructure.event_store import EventStore
 from identity.domain.repositories.employee_repository import IEmployeeWriteRepository
 
 from ...domain.entities import Employee
-from ...domain.events import EmployeeCreated, EmployeeImported, EmployeeUpdated
+from ...domain.events import (
+    EmployeeActivated,
+    EmployeeCompanySet,
+    EmployeeCreated,
+    EmployeeDeactivated,
+    EmployeeImported,
+    EmployeeRoleChanged,
+    EmployeeUpdated,
+)
 from ...domain.value_objects.ids import EmployeeId, UserId
 
 EMPLOYEE_STREAM = "identity.employee"
@@ -14,6 +22,10 @@ EMPLOYEE_EVENT_TYPES = {
     "users.employee.created": EmployeeCreated,
     "users.employee.updated": EmployeeUpdated,
     "users.employee.imported": EmployeeImported,
+    "users.employee.role_changed": EmployeeRoleChanged,
+    "users.employee.deactivated": EmployeeDeactivated,
+    "users.employee.activated": EmployeeActivated,
+    "users.employee.company_set": EmployeeCompanySet,
 }
 
 EMPLOYEE_NUMBER_KEY = "identity.employee.employee_number"

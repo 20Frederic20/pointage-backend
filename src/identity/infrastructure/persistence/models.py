@@ -78,6 +78,7 @@ class EmployeeModel(BaseModel):
     user_id: Mapped[str] = mapped_column(
         String(32), ForeignKey("users.id"), nullable=False, index=True
     )
+    company_directory_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class EmployeeAssignmentModel(BaseModel):

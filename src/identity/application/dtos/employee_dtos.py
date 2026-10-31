@@ -14,6 +14,7 @@ class EmployeeDTO(DTO):
     role: Role
     is_active: bool
     phone: str | None = None
+    company_directory_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -26,6 +27,7 @@ class EmployeeDTO(DTO):
             is_active=employee.is_active,
             phone=employee.phone,
             employee_number=employee.employee_number,
+            company_directory_id=employee.company_directory_id.value if employee.company_directory_id else None,
             created_at=employee.created_at,
             updated_at=employee.updated_at,
         )

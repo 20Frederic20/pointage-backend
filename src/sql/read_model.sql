@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS employees (
     phone character varying(20),
     is_active boolean DEFAULT false NOT NULL,
     role character varying(16) NOT NULL,
+    company_directory_id character varying(32),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     version_id integer DEFAULT 1

@@ -24,6 +24,10 @@ from ..domain.events import (
     EmployeeCreated,
     EmployeeImported,
     EmployeeUpdated,
+    EmployeeRoleChanged,
+    EmployeeActivated,
+    EmployeeDeactivated,
+    EmployeeCompanySet,
     SiteActivated,
     SiteCreated,
     SiteDeactivated,
@@ -221,7 +225,10 @@ def to_user_password_cleared(event: UserPasswordCleared) -> UserPasswordClearedN
     return _notification(UserPasswordClearedNotification, event, {"user_id": event.get_aggregate_id().value})
 
 
-def to_employee_updated(event: EmployeeUpdated) -> EmployeeUpdatedNotification:
+def to_employee_updated(
+    event: EmployeeUpdated | EmployeeRoleChanged | EmployeeActivated | EmployeeDeactivated | EmployeeCompanySet,
+) -> EmployeeUpdatedNotification:
+    # Every change of an employee record is published as "employee updated".
     return _notification(EmployeeUpdatedNotification, event, {"employee_id": event.get_aggregate_id().value})
 
 
@@ -258,6 +265,10 @@ USERS_EVENT_MAPPERS: dict[type, object] = {
     UserProfileUpdated: to_user_profile_updated,
     UserPasswordCleared: to_user_password_cleared,
     EmployeeUpdated: to_employee_updated,
+    EmployeeRoleChanged: to_employee_updated,
+    EmployeeActivated: to_employee_updated,
+    EmployeeDeactivated: to_employee_updated,
+    EmployeeCompanySet: to_employee_updated,
     # Stored in the event store, never published: presence telemetry (one per
     # login) and the one-off takeover of the state tables.
     UserActivityRecorded: None,
@@ -285,4 +296,8 @@ USERS_EVENT_REGISTRY: dict[str, type] = {
     "users.user.profile_updated": UserProfileUpdatedNotification,
     "users.user.password_cleared": UserPasswordClearedNotification,
     "users.employee.updated": EmployeeUpdatedNotification,
+    "users.employee.role_changed": EmployeeUpdatedNotification,
+    "users.employee.activated": EmployeeUpdatedNotification,
+    "users.employee.deactivated": EmployeeUpdatedNotification,
+    "users.employee.company_set": EmployeeUpdatedNotification,
 }
