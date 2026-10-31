@@ -21,10 +21,22 @@ class AccountCredentialsDTO(DTO):
     role: str
     is_active: bool
     password_hash: str | None
+    # Set when the identifier was an employee number: that record, and no other.
+    employee_id: str | None = None
 
 
 @dataclass(frozen=True)
 class AccountDTO(DTO):
     id: str
+    role: str
+    is_active: bool
+
+
+@dataclass(frozen=True)
+class EmploymentDTO(DTO):
+    """One employee record of an account: the company it works for and its role there."""
+
+    employee_id: str
+    company_name: str | None
     role: str
     is_active: bool

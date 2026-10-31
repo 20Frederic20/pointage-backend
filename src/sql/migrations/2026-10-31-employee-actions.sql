@@ -10,3 +10,8 @@ ALTER TABLE employees ADD COLUMN IF NOT EXISTS company_directory_id character va
 
 -- employee_assignments: an assignment replaced by a same-day transfer.
 ALTER TABLE employee_assignments ADD COLUMN IF NOT EXISTS cancelled boolean DEFAULT false NOT NULL;
+
+-- ===== WRITE database (pointage_db, port 7433) =====
+
+-- refresh_tokens: the employee record a session works with (one per company).
+ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS employee_id VARCHAR(32);

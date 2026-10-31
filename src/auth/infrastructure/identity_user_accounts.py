@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from core.domain.events import BaseEvent, IEventBus
 from identity.application import (
     GetEmployeeByEmployeeNumberQuery,
+    GetEmployeesByUserIdQuery,
     GetUserByEmailQuery,
     GetUserByIdQuery,
     PasswordHasher,
@@ -24,7 +25,7 @@ from identity.application import (
 )
 from identity.infrastructure import build_users_container
 
-from ..application.dtos import AccountCredentialsDTO, AccountDTO
+from ..application.dtos import AccountCredentialsDTO, AccountDTO, EmploymentDTO
 from ..application.ports import UserAccounts
 
 logger = logging.getLogger(__name__)
@@ -55,8 +56,13 @@ class IdentityUserAccounts(UserAccounts):
             return await users.send(request)
 
     async def find_credentials(self, identifier: str) -> AccountCredentialsDTO | None:
-        """An identifier with ``@`` is an email; anything else is an employee number."""
-        email = identifier if "@" in identifier else await self._email_of_employee(identifier)
+        """An identifier with ``@`` is an email; anything else is an employee number,
+        which also names the employee record the session opens on."""
+        employee_id = None
+        if "@" in identifier:
+            email = identifier
+        else:
+            email, employee_id = await self._email_of_employee(identifier)
         if email is None:
             return None
         dto = await self._send(GetUserByEmailQuery(email=email))
@@ -68,14 +74,27 @@ class IdentityUserAccounts(UserAccounts):
             role=str(dto.role),
             is_active=dto.is_active,
             password_hash=dto.password_hash,
+            employee_id=employee_id,
         )
 
-    async def _email_of_employee(self, employee_number: str) -> str | None:
+    async def _email_of_employee(self, employee_number: str) -> tuple[str | None, str | None]:
         employee = await self._send(GetEmployeeByEmployeeNumberQuery(employee_number=employee_number))
         if employee is None:
-            return None
+            return None, None
         user = await self._send(GetUserByIdQuery(user_id=employee.user_id))
-        return user.email if user is not None else None
+        return (user.email if user is not None else None), employee.id
+
+    async def employments(self, user_id: str) -> list[EmploymentDTO]:
+        records = await self._send(GetEmployeesByUserIdQuery(user_id=user_id))
+        return [
+            EmploymentDTO(
+                employee_id=record.id,
+                company_name=record.company_name,
+                role=str(record.role),
+                is_active=record.is_active,
+            )
+            for record in records
+        ]
 
     async def get_account(self, user_id: str) -> AccountDTO | None:
         dto = await self._send(GetUserByIdQuery(user_id=user_id))

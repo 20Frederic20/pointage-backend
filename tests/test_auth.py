@@ -15,6 +15,7 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from auth.application.commands import (
+    SelectEmployeeCommand,
     LoginCommand,
     LogoutCommand,
     RefreshSessionCommand,
@@ -23,6 +24,7 @@ from auth.application.commands import (
 )
 from auth.application.dtos import AccountCredentialsDTO, AccountDTO
 from auth.application.handlers import (
+    SelectEmployeeHandler,
     LoginHandler,
     LogoutHandler,
     RefreshSessionHandler,
@@ -92,6 +94,20 @@ class FakeUserAccounts(UserAccounts):
     def __init__(self):
         self.accounts = {}  # email -> AccountCredentialsDTO
         self.employee_numbers = {}  # employee number -> email
+        self.records = {}  # user id -> [EmploymentDTO]
+        self.record_numbers = {}  # employee number -> employee id
+
+    def add_employment(self, user_id, employee_id, *, company="Société A", role="EMPLOYEE", active=True, number=None):
+        from auth.application.dtos import EmploymentDTO
+
+        mine = [e for e in self.records.get(user_id, []) if e.employee_id != employee_id]
+        mine.append(EmploymentDTO(employee_id=employee_id, company_name=company, role=role, is_active=active))
+        self.records[user_id] = mine
+        if number is not None:
+            self.record_numbers[number] = employee_id
+
+    async def employments(self, user_id):
+        return list(self.records.get(user_id, []))
 
     def add(self, email, password, *, role="EMPLOYEE", is_active=True, user_id="usr1", employee_number=None):
         """``password=None``: a code-only account."""
@@ -106,8 +122,13 @@ class FakeUserAccounts(UserAccounts):
             self.employee_numbers[employee_number] = email
 
     async def find_credentials(self, identifier):
+        from dataclasses import replace
+
         email = identifier if "@" in identifier else self.employee_numbers.get(identifier)
-        return self.accounts.get(email)
+        account = self.accounts.get(email)
+        if account is not None and "@" not in identifier:
+            account = replace(account, employee_id=self.record_numbers.get(identifier))
+        return account
 
     async def get_account(self, user_id):
         for a in self.accounts.values():
@@ -211,6 +232,11 @@ def env():
         logout=lambda raw: run(
             LogoutHandler(**common, token_issuer=tokens).handle(LogoutCommand(refresh_token=raw))
         ),
+        select=lambda selection_token, employee_id: run(
+            SelectEmployeeHandler(**common, user_accounts=accounts, token_issuer=tokens).handle(
+                SelectEmployeeCommand(selection_token=selection_token, employee_id=employee_id)
+            )
+        ),
     )
 
 
@@ -244,6 +270,142 @@ def test_inactive_account_cannot_log_in(env):
     env.accounts.add("old@pointage.test", "correct-password", is_active=False, user_id="usr2")
     with pytest.raises(InvalidCredentialsError):
         env.login("old@pointage.test", "correct-password")
+
+
+# ---- employee records: one session per company ------------------------------
+
+
+def _claims(env, pair):
+    return env.tokens.decode_access_token(pair.access_token)
+
+
+def test_login_by_matricule_binds_that_record(env):
+    env.accounts.add_employment("usr1", "emp1", role="MANAGER", number="EMP-001")
+    env.accounts.add_employment("usr1", "emp2", role="HR", company="Société B")
+    principal = _claims(env, env.login("EMP-001", "correct-password"))
+    assert (principal.employee_id, principal.role) == ("emp1", "MANAGER")
+
+
+def test_login_by_matricule_of_inactive_record_is_invalid_credentials(env):
+    env.accounts.add_employment("usr1", "emp1", active=False, number="EMP-001")
+    env.accounts.add_employment("usr1", "emp2", company="Société B")
+    with pytest.raises(InvalidCredentialsError):
+        env.login("EMP-001", "correct-password")
+
+
+def test_login_by_email_single_active_record_returns_tokens(env):
+    env.accounts.add_employment("usr1", "emp1", role="HR")
+    principal = _claims(env, env.login("ana@pointage.test", "correct-password"))
+    assert (principal.employee_id, principal.role) == ("emp1", "HR")
+
+
+def test_login_by_email_two_active_records_requires_selection_then_select_issues_bound_token(env):
+    from auth.application.dtos import SelectionRequiredDTO
+
+    env.accounts.add_employment("usr1", "emp1", role="EMPLOYEE", company="Société A")
+    env.accounts.add_employment("usr1", "emp2", role="MANAGER", company="Société B")
+    choice = env.login("ana@pointage.test", "correct-password")
+    assert isinstance(choice, SelectionRequiredDTO)
+    assert [(e.employee_id, e.company_name, e.role) for e in choice.employments] == [
+        ("emp1", "Société A", "EMPLOYEE"), ("emp2", "Société B", "MANAGER")]
+    assert env.repo.rows == {}  # no session before the choice
+    principal = _claims(env, env.select(choice.selection_token, "emp2"))
+    assert (principal.employee_id, principal.role) == ("emp2", "MANAGER")
+
+
+def test_deactivated_in_one_company_logs_straight_into_the_other(env):
+    env.accounts.add_employment("usr1", "emp1", active=False)
+    env.accounts.add_employment("usr1", "emp2", role="HR", company="Société B")
+    assert _claims(env, env.login("ana@pointage.test", "correct-password")).employee_id == "emp2"
+
+
+def test_all_records_inactive_is_no_active_employment(env):
+    from auth.domain.errors import NoActiveEmploymentError
+
+    env.accounts.add_employment("usr1", "emp1", active=False)
+    with pytest.raises(NoActiveEmploymentError):
+        env.login("ana@pointage.test", "correct-password")
+    assert (NoActiveEmploymentError.code, NoActiveEmploymentError.http_status) == ("NO_ACTIVE_EMPLOYMENT", 403)
+
+
+def test_account_without_records_keeps_user_role(env):
+    principal = _claims(env, env.login("ana@pointage.test", "correct-password"))
+    assert (principal.employee_id, principal.role) == (None, "EMPLOYEE")
+
+
+def test_selection_token_expired_or_forged_is_401(env):
+    env.accounts.add_employment("usr1", "emp1")
+    env.accounts.add_employment("usr1", "emp2", company="Société B")
+    with pytest.raises(InvalidAccessTokenError):
+        env.select("forged.token.value", "emp1")
+    access = env.login("ana@pointage.test", "correct-password")  # still a selection: no access token
+    with pytest.raises(InvalidAccessTokenError):
+        env.select(env.tokens.issue_access_token(user_id="usr1", role="EMPLOYEE", employee_id=None), "emp1")
+    expired = make_issuer(selection_token_ttl_seconds=-1).issue_selection_token(user_id="usr1")
+    with pytest.raises(InvalidAccessTokenError):
+        env.select(expired, "emp1")
+    assert access.selection_token
+
+
+def test_select_employee_not_owned_or_inactive_is_403(env):
+    from auth.domain.errors import NoActiveEmploymentError
+
+    env.accounts.add_employment("usr1", "emp1")
+    env.accounts.add_employment("usr1", "emp2", active=False, company="Société B")
+    token = env.tokens.issue_selection_token(user_id="usr1")
+    for employee_id in ("emp2", "emp9"):
+        with pytest.raises(NoActiveEmploymentError):
+            env.select(token, employee_id)
+
+
+def test_refresh_after_deactivation_is_401(env):
+    env.accounts.add_employment("usr1", "emp1")
+    pair = env.login("ana@pointage.test", "correct-password")
+    env.accounts.add_employment("usr1", "emp1", active=False)
+    assert env.refresh(pair.refresh_token) is None
+
+
+def test_refresh_keeps_the_record_and_its_role(env):
+    env.accounts.add_employment("usr1", "emp1", role="EMPLOYEE")
+    env.accounts.add_employment("usr1", "emp2", role="HR", company="Société B")
+    choice = env.login("ana@pointage.test", "correct-password")
+    pair = env.refresh(env.select(choice.selection_token, "emp2").refresh_token)
+    assert (_claims(env, pair).employee_id, _claims(env, pair).role) == ("emp2", "HR")
+
+
+def _legacy_session(env):
+    pair = env.login("ana@pointage.test", "correct-password")  # no records yet: unbound session
+    assert _claims(env, pair).employee_id is None
+    return pair
+
+
+def test_legacy_refresh_without_employee_binds_single_active_record(env):
+    pair = _legacy_session(env)
+    env.accounts.add_employment("usr1", "emp1", role="HR")
+    assert _claims(env, env.refresh(pair.refresh_token)).employee_id == "emp1"
+
+
+def test_legacy_refresh_with_two_active_records_is_401(env):
+    pair = _legacy_session(env)
+    env.accounts.add_employment("usr1", "emp1")
+    env.accounts.add_employment("usr1", "emp2", company="Société B")
+    assert env.refresh(pair.refresh_token) is None
+
+
+def test_otp_login_follows_same_selection_rules(env):
+    from auth.application.dtos import SelectionRequiredDTO
+
+    env.accounts.add_employment("usr3", "emp7", number="EMP-003")
+    env.accounts.add_employment("usr3", "emp8", company="Société B")
+    code = code_in(env.request_code("kofi@pointage.bj"))
+    assert isinstance(env.verify_code("kofi@pointage.bj", code), SelectionRequiredDTO)
+
+
+def test_otp_login_by_matricule_binds_that_record(env):
+    env.accounts.add_employment("usr3", "emp7", number="EMP-003")
+    env.accounts.add_employment("usr3", "emp8", company="Société B")
+    code = code_in(env.request_code("EMP-003"))
+    assert _claims(env, env.verify_code("EMP-003", code)).employee_id == "emp7"
 
 
 # ---- refresh ----------------------------------------------------------------
@@ -435,7 +597,7 @@ def test_guards_return_401_without_token_and_403_for_the_wrong_role():
 
     assert client.get("/auth/me").status_code == 401
     assert client.get("/auth/me", headers={"Authorization": "Bearer garbage"}).status_code == 401
-    assert client.get("/auth/me", headers=employee).json() == {"userId": "usr1", "role": "EMPLOYEE"}
+    assert client.get("/auth/me", headers=employee).json() == {"employeeId": None, "userId": "usr1", "role": "EMPLOYEE"}
     assert client.get("/hr-only", headers=employee).status_code == 403
     assert client.get("/hr-only", headers=hr).json() == {"userId": "usr2"}
 
@@ -524,3 +686,29 @@ def test_account_without_password_and_admin_only_password_removal():
         send(ClearUserPasswordHandler, ClearUserPasswordCommand(user_id=admin.id, actor_id=kofi.id))
     send(ClearUserPasswordHandler, ClearUserPasswordCommand(user_id=ana.id, actor_id=admin.id))
     assert by_email["ana@pointage.bj"].password_hash is None
+
+
+def test_login_routes_return_the_company_choice_then_select_employee_tokens(env):
+    from auth.infrastructure import AuthContainer
+    from auth.interface import get_auth
+
+    env.accounts.add_employment("usr1", "emp1", company="Société A")
+    env.accounts.add_employment("usr1", "emp2", role="HR", company="Société B")
+    app = FastAPI()
+    register_exception_handlers(app)
+    app.include_router(auth_router)
+    app.state.container = SimpleNamespace(token_issuer=env.tokens)
+    app.dependency_overrides[get_auth] = lambda: AuthContainer(
+        refresh_token_repository=env.repo, login_code_repository=env.codes, unit_of_work=NoopUnitOfWork(),
+        event_bus=SimpleNamespace(publish=lambda event: None), user_accounts=env.accounts,
+        password_hasher=env.hasher, token_issuer=env.tokens)
+    client = TestClient(app)
+
+    choice = client.post("/auth/login", json={"identifier": "ana@pointage.test", "password": "correct-password"}).json()
+    assert choice["status"] == "selection_required"
+    assert choice["employments"][1] == {"employeeId": "emp2", "companyName": "Société B", "role": "HR"}
+    pair = client.post("/auth/select-employee",
+                       json={"selectionToken": choice["selectionToken"], "employeeId": "emp2"}).json()
+    assert pair["status"] == "authenticated"
+    me = client.get("/auth/me", headers={"Authorization": "Bearer " + pair["accessToken"]}).json()
+    assert me == {"employeeId": "emp2", "userId": "usr1", "role": "HR"}

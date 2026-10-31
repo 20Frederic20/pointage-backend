@@ -4,6 +4,7 @@ from .errors import (
     InvalidCredentialsError,
     InvalidLoginCodeError,
     InvalidRefreshTokenError,
+    NoActiveEmploymentError,
     RefreshTokenNotUsableError,
 )
 
@@ -13,5 +14,6 @@ __all__ = [
     "InvalidCredentialsError",
     "InvalidLoginCodeError",
     "InvalidRefreshTokenError",
+    "NoActiveEmploymentError",
     "RefreshTokenNotUsableError",
 ]

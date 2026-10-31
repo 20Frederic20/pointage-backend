@@ -11,6 +11,7 @@ from ..domain.specifications import (
     EmployeeEmployeeNumberIs,
     EmployeeIsActiveIs,
     EmployeeRoleIs,
+    EmployeeUserIs,
     UserEmailIs,
     UserIsActiveIs,
     UserRoleIs,
@@ -46,6 +47,8 @@ class EmployeesSpecificationTranslator(SqlAlchemySpecificationTranslator):
             return EmployeeModel.is_active.is_(spec.expected)
         if isinstance(spec, EmployeeRoleIs):
             return EmployeeModel.role == spec.expected
+        if isinstance(spec, EmployeeUserIs):
+            return EmployeeModel.user_id == spec.user_id
         raise TypeError(
             f"Unknown leaf specification {type(spec).__name__} — add a branch"
         )

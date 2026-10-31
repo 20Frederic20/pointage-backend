@@ -58,6 +58,8 @@ from ..application import (
     GetEmployeeAssignmentsQuery,
     GetEmployeeByEmployeeNumberHandler,
     GetEmployeeByEmployeeNumberQuery,
+    GetEmployeesByUserIdHandler,
+    GetEmployeesByUserIdQuery,
     GetEmployeeByIdHandler,
     GetEmployeeByIdQuery,
     GetEmployeesQuery,
@@ -158,6 +160,7 @@ class UsersContainer:
         request_map.bind(GetDirectorySitesQuery, GetDirectorySitesHandler)
         request_map.bind(GetEmployeeAssignmentsQuery, GetEmployeeAssignmentsHandler)
         request_map.bind(GetEmployeeByEmployeeNumberQuery, GetEmployeeByEmployeeNumberHandler)
+        request_map.bind(GetEmployeesByUserIdQuery, GetEmployeesByUserIdHandler)
 
         self._mediator = ApplicationMediator(
             request_map=request_map,
@@ -299,6 +302,10 @@ class UsersContainer:
                 employee_assignment_repository=self.employee_assignment_read_repository,
                 site_repository=self.site_read_repository,
                 directory_repository=self.directory_read_repository,
+            )
+        if handler_type is GetEmployeesByUserIdHandler:
+            return GetEmployeesByUserIdHandler(
+                employee_repository=self.employee_read_repository, enricher=self._enricher()
             )
         if handler_type is GetEmployeeByEmployeeNumberHandler:
             return GetEmployeeByEmployeeNumberHandler(employee_repository=self.employee_read_repository)

@@ -18,6 +18,8 @@ class AuthSettings(BaseSettings):
     # it, Friday → Monday does not), and after 30 days whatever happens.
     refresh_token_idle_hours: int = 36
     session_max_days: int = 30
+    # Several active companies: the short-lived token that lets the login pick one.
+    selection_token_ttl_seconds: int = 300
 
     model_config = SettingsConfigDict(
         env_file=".env",
