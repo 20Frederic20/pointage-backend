@@ -15,10 +15,10 @@ from core.domain.entity import AggregateRoot
 from ...domain.entities import LoginCode, RefreshToken
 from ...domain.errors import InvalidLoginCodeError
 from ...domain.repositories import ILoginCodeRepository, IRefreshTokenRepository
-from ...domain.value_objects import RefreshTokenId
 from ..commands import VerifyLoginCodeCommand
-from ..dtos import TokenPairDTO
+from ..dtos import SelectionRequiredDTO, TokenPairDTO
 from ..ports import TokenIssuer, UserAccounts
+from ..services import SelectionRequired, resolve_employment, start_session
 
 
 class VerifyLoginCodeHandler(CommandHandler[VerifyLoginCodeCommand, TokenPairDTO | None]):
@@ -40,7 +40,7 @@ class VerifyLoginCodeHandler(CommandHandler[VerifyLoginCodeCommand, TokenPairDTO
 
     async def _execute(
         self, request: VerifyLoginCodeCommand
-    ) -> tuple[TokenPairDTO | None, Sequence[AggregateRoot]]:
+    ) -> tuple[TokenPairDTO | SelectionRequiredDTO | None, Sequence[AggregateRoot]]:
         account = await self._accounts.find_credentials(request.identifier)
         if account is None or not account.is_active or account.password_hash is not None:
             raise InvalidLoginCodeError("Invalid login code")
@@ -54,21 +54,18 @@ class VerifyLoginCodeHandler(CommandHandler[VerifyLoginCodeCommand, TokenPairDTO
             audit.warning("action=OTP_VERIFY identifier=%s status=FAIL reason=invalid_code", request.identifier)
             return None, [login_code]
 
-        raw_refresh_token = self._tokens.new_refresh_token()
-        refresh_token = RefreshToken.start_session(
-            RefreshTokenId.generate(),
-            user_id=account.id,
-            token_hash=self._tokens.hash_refresh_token(raw_refresh_token),
-            now=now,
-            idle_ttl=self._tokens.refresh_token_idle_ttl,
-            max_lifetime=self._tokens.session_max_lifetime,
-        )
-        await self._accounts.record_activity(account.id)
-        tokens = TokenPairDTO(
-            access_token=self._tokens.issue_access_token(user_id=account.id, role=account.role),
-            refresh_token=raw_refresh_token,
-            expires_in=self._tokens.access_token_ttl_seconds,
-        )
+        outcome = resolve_employment(account, await self._accounts.employments(account.id))
+        if outcome is None:
+            # The employee number names an inactive record (raising rolls the attempt back).
+            audit.warning("action=OTP_VERIFY identifier=%s status=FAIL reason=inactive_record", request.identifier)
+            raise InvalidLoginCodeError("Invalid login code")
+        if isinstance(outcome, SelectionRequired):
+            audit.info("action=OTP_VERIFY identifier=%s user_id=%s status=CHOICE", request.identifier, account.id)
+            return SelectionRequiredDTO(
+                selection_token=self._tokens.issue_selection_token(user_id=account.id),
+                employments=outcome.employments,
+            ), [login_code]
+        tokens, refresh_token = await start_session(self._tokens, self._accounts, user_id=account.id, bound=outcome)
         audit.info("action=OTP_VERIFY identifier=%s user_id=%s status=OK", request.identifier, account.id)
         return tokens, [login_code, refresh_token]
 

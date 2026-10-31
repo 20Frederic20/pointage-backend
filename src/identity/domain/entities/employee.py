@@ -2,13 +2,22 @@ from datetime import datetime
 from typing import Self
 
 from core.domain.entity import AggregateRoot
-from identity.domain import EmployeeId, Role, UserId
-from identity.domain.events.employee_events import EmployeeCreated, EmployeeImported, EmployeeUpdated
+from identity.domain import DirectoryId, EmployeeId, Role, UserId
+from identity.domain.errors import EmployeeAlreadyActiveError, EmployeeAlreadyInactiveError
+from identity.domain.events.employee_events import (
+    EmployeeActivated,
+    EmployeeCompanySet,
+    EmployeeCreated,
+    EmployeeDeactivated,
+    EmployeeImported,
+    EmployeeRoleChanged,
+    EmployeeUpdated,
+)
 
 
 class Employee(AggregateRoot[EmployeeId]):
 
-    __slots__ = ("_employee_number", "_is_active", "_phone", "_role", "_user_id", "_employee_id",)
+    __slots__ = ("_company_directory_id", "_employee_number", "_is_active", "_phone", "_role", "_user_id", "_employee_id",)
 
     def __init__ (
         self,
@@ -19,6 +28,7 @@ class Employee(AggregateRoot[EmployeeId]):
         is_active: bool,
         phone: str | None = None,
         role: Role = Role.EMPLOYEE,
+        company_directory_id: DirectoryId | None = None,
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
         version: int = 0,
@@ -33,6 +43,7 @@ class Employee(AggregateRoot[EmployeeId]):
         self._role = role
         self._is_active =  is_active
         self._phone = phone
+        self._company_directory_id = company_directory_id
 
     @classmethod
     def create(
@@ -44,6 +55,7 @@ class Employee(AggregateRoot[EmployeeId]):
         is_active: bool,
         phone: str | None = None,
         role: Role = Role.EMPLOYEE,
+        company_directory_id: DirectoryId | None = None,
     ) -> Self:
         """
         Founding signup: the first employee of a brand-new workspace,.
@@ -57,6 +69,7 @@ class Employee(AggregateRoot[EmployeeId]):
                 is_active=is_active,
                 phone=phone,
                 role=role,
+                company_directory_id=company_directory_id,
             )
         )
         return employee
@@ -79,6 +92,31 @@ class Employee(AggregateRoot[EmployeeId]):
             return
         self._raise(event)
 
+    def change_phone(self, phone: str | None) -> None:
+        """New phone (``None`` = untouched)."""
+        self.update(employee_number=None, is_active=None, phone=phone)
+
+    def change_role(self, role: Role) -> None:
+        """The role in this company; same role: nothing recorded."""
+        if role == self._role:
+            return
+        self._raise(EmployeeRoleChanged(self.id, role=role))
+
+    def deactivate(self) -> None:
+        """Leave or departure: the record can no longer punch."""
+        if not self._is_active:
+            raise EmployeeAlreadyInactiveError(f"Employee {self.id.value} is already inactive", context=self.id.value)
+        self._raise(EmployeeDeactivated(self.id))
+
+    def activate(self) -> None:
+        if self._is_active:
+            raise EmployeeAlreadyActiveError(f"Employee {self.id.value} is already active", context=self.id.value)
+        self._raise(EmployeeActivated(self.id))
+
+    def set_company(self, directory_id: DirectoryId) -> None:
+        """Backfill only: the company (root directory) of a record created before it was stored."""
+        self._raise(EmployeeCompanySet(self.id, company_directory_id=directory_id))
+
     def _apply(self, event) -> None:
         match event:
             case EmployeeCreated() | EmployeeImported():
@@ -88,12 +126,21 @@ class Employee(AggregateRoot[EmployeeId]):
                 self._is_active = event.is_active
                 self._phone = event.phone
                 self._role = event.role
+                self._company_directory_id = event.company_directory_id
                 if isinstance(event, EmployeeImported):
                     self._created_at = event.created_at
             case EmployeeUpdated():
                 self._employee_number = event.employee_number
                 self._is_active = event.is_active
                 self._phone = event.phone
+            case EmployeeRoleChanged():
+                self._role = event.role
+            case EmployeeDeactivated():
+                self._is_active = False
+            case EmployeeActivated():
+                self._is_active = True
+            case EmployeeCompanySet():
+                self._company_directory_id = event.company_directory_id
             case _:
                 super()._apply(event)
 
@@ -116,3 +163,7 @@ class Employee(AggregateRoot[EmployeeId]):
     @property
     def phone(self) -> str | None:
         return self._phone
+
+    @property
+    def company_directory_id(self) -> DirectoryId | None:
+        return self._company_directory_id

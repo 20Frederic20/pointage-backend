@@ -4,6 +4,7 @@ from .commands import (
     RefreshSessionCommand,
     RequestLoginCodeCommand,
     VerifyLoginCodeCommand,
+    SelectEmployeeCommand,
 )
 from .dtos import AccountCredentialsDTO, AccountDTO, OutgoingEmailDTO, PrincipalDTO, TokenPairDTO
 from .ports import EmailSender, TokenIssuer, UserAccounts
@@ -22,4 +23,5 @@ __all__ = [
     "TokenPairDTO",
     "UserAccounts",
     "VerifyLoginCodeCommand",
+    "SelectEmployeeCommand",
 ]

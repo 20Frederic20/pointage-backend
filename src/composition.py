@@ -7,6 +7,7 @@ from core.domain.events.event_bus_schema import IEventBus
 from core.infrastructure.outbox import OutboxRelay
 from core.infrastructure.projections import ProjectionRunner
 from core.settings import AppSettings, DatabaseSettings
+from punch.application.ports import IPhotoStorage
 
 
 class AppContainer:
@@ -35,6 +36,7 @@ class AppContainer:
         projection_runner: ProjectionRunner,
         token_issuer: TokenIssuer,
         email_sender: EmailSender,
+        photo_storage: IPhotoStorage,
     ) -> None:
         self.settings = settings
         self.database_settings = database_settings
@@ -47,3 +49,4 @@ class AppContainer:
         self.projection_runner = projection_runner
         self.token_issuer = token_issuer
         self.email_sender = email_sender
+        self.photo_storage = photo_storage

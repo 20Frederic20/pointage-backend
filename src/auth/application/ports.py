@@ -9,7 +9,7 @@ owns — auth never touches the ``users`` table or ``UserRepository``;
 from abc import ABC, abstractmethod
 from datetime import timedelta
 
-from .dtos import AccountCredentialsDTO, AccountDTO, OutgoingEmailDTO, PrincipalDTO
+from .dtos import AccountCredentialsDTO, AccountDTO, EmploymentDTO, OutgoingEmailDTO, PrincipalDTO
 
 
 class TokenIssuer(ABC):
@@ -33,7 +33,17 @@ class TokenIssuer(ABC):
         ...
 
     @abstractmethod
-    def issue_access_token(self, *, user_id: str, role: str) -> str:
+    def issue_access_token(self, *, user_id: str, role: str, employee_id: str | None = None) -> str:
+        ...
+
+    @abstractmethod
+    def issue_selection_token(self, *, user_id: str) -> str:
+        """A short-lived token proving the login succeeded, to pick a company with."""
+        ...
+
+    @abstractmethod
+    def decode_selection_token(self, token: str) -> str:
+        """The ``user_id`` of a valid selection token; ``InvalidAccessTokenError`` otherwise."""
         ...
 
     @abstractmethod
@@ -85,6 +95,10 @@ class UserAccounts(ABC):
     async def record_activity(self, user_id: str) -> None:
         """Best effort: a failure here must never fail a login or a refresh."""
         ...
+
+    async def employments(self, user_id: str) -> list[EmploymentDTO]:
+        """The account's employee records, one per company (none for a plain account)."""
+        return []
 
 
 class EmailSender(ABC):

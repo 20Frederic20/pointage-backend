@@ -43,6 +43,11 @@ class IEmployeeRepository(IRepository[Employee, EmployeeId]):
 class IEmployeeWriteRepository(IWriteRepository[Employee, EmployeeId]):
 
     @abstractmethod
+    async def find_all_by_user_id(self, user_id: UserId) -> list[Employee]:
+        """Every employee record of an account (one per company)."""
+        ...
+
+    @abstractmethod
     async def exists_by_employee_number(self, employee_number: str) -> bool:
         ...
 

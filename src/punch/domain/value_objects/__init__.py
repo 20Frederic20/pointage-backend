@@ -3,11 +3,13 @@ from .entry_type import EntryType
 from .ids import TimeEntryId
 from .location_confidence import LocationConfidence
 from .photo_status import PhotoStatus
+from .validation_status import TimeEntryValidationStatus
 
 __all__ = [
     "EntrySource",
     "EntryType",
     "LocationConfidence",
     "PhotoStatus",
-    "TimeEntryId"
+    "TimeEntryId",
+    "TimeEntryValidationStatus",
 ]

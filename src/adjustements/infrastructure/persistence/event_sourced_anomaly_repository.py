@@ -11,7 +11,13 @@ from core.infrastructure.event_store import EventModel, EventStore
 from identity.domain import EmployeeId
 
 from ...domain.entities import Anomaly
-from ...domain.events import AnomalyCreated, AnomalyImported, AnomalyResolved
+from ...domain.events import (
+    AnomalyCreated,
+    AnomalyImported,
+    AnomalyRejected,
+    AnomalyResolved,
+    AnomalyValidated,
+)
 from ...domain.repositories import IAnomalyRepository
 from ...domain.value_objects import AnomalyId, AnomalyStatus, Severity
 
@@ -21,6 +27,8 @@ ANOMALY_EVENT_TYPES = {
     "adjustments.anomaly.created": AnomalyCreated,
     "adjustments.anomaly.resolved": AnomalyResolved,
     "adjustments.anomaly.imported": AnomalyImported,
+    "adjustments.anomaly.validated": AnomalyValidated,
+    "adjustments.anomaly.rejected": AnomalyRejected,
 }
 
 # Stream type of punch's time entries (see EventSourcedTimeEntryRepository).

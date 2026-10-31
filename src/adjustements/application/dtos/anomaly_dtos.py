@@ -18,6 +18,11 @@ class AnomalyDTO(DTO):
     description: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    employee_id: str | None = None
+    assisted_by_user_id: str | None = None
+    decided_by: str | None = None
+    decided_at: datetime | None = None
+    decision_comment: str | None = None
 
     @classmethod
     def from_aggregate(cls, anomaly: Anomaly) -> "AnomalyDTO":
@@ -31,7 +36,12 @@ class AnomalyDTO(DTO):
             detected_at=anomaly.detected_at,
             description=anomaly.description,
             created_at=anomaly.created_at,
-            updated_at=anomaly.updated_at
+            updated_at=anomaly.updated_at,
+            employee_id=anomaly.employee_id.value if anomaly.employee_id else None,
+            assisted_by_user_id=anomaly.assisted_by_user_id.value if anomaly.assisted_by_user_id else None,
+            decided_by=anomaly.decided_by.value if anomaly.decided_by else None,
+            decided_at=anomaly.decided_at,
+            decision_comment=anomaly.decision_comment,
         )
 
 
@@ -39,3 +49,45 @@ class AnomalyDTO(DTO):
 class AnomaliesPageDTO(DTO):
     items: tuple[AnomalyDTO, ...]
     total: int
+
+@dataclass(frozen=True)
+class AnomalyListItemDTO(DTO):
+    """One back-office row: the anomaly, its time entry, the punched employee
+    and the assistant, as joined on the read side."""
+
+    id: str
+    type: AnomalyType
+    severity: Severity
+    status: AnomalyStatus
+    detected_at: datetime
+    employee_id: str | None = None
+    employee_number: str | None = None
+    employee_first_name: str | None = None
+    employee_last_name: str | None = None
+    assisted_by_first_name: str | None = None
+    assisted_by_last_name: str | None = None
+    occured_at: datetime | None = None
+    entry_type: str | None = None
+    photo_key: str | None = None
+    decided_at: datetime | None = None
+    decision_comment: str | None = None
+    site_name: str | None = None  # the punched employee's site assigned on the punch date
+
+    @property
+    def has_photo(self) -> bool:
+        return self.photo_key is not None
+
+
+@dataclass(frozen=True)
+class AnomalyListPageDTO(DTO):
+    items: tuple[AnomalyListItemDTO, ...]
+    total: int
+
+
+@dataclass(frozen=True)
+class AnomalyDecisionDTO(DTO):
+    """The decided anomaly, and what the day recalculation needs."""
+
+    anomaly: AnomalyDTO
+    employee_id: str
+    occured_at: datetime

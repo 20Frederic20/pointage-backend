@@ -20,6 +20,7 @@ class RefreshToken(AggregateRoot[RefreshTokenId]):
     """
 
     __slots__ = (
+        "_employee_id",
         "_expires_at",
         "_family_id",
         "_revoked_at",
@@ -38,6 +39,7 @@ class RefreshToken(AggregateRoot[RefreshTokenId]):
         expires_at: datetime,
         session_expires_at: datetime,
         revoked_at: datetime | None = None,
+        employee_id: str | None = None,
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
         version: int = 0,
@@ -49,6 +51,9 @@ class RefreshToken(AggregateRoot[RefreshTokenId]):
         self._expires_at = expires_at
         self._session_expires_at = session_expires_at
         self._revoked_at = revoked_at
+        # The employee record the session works with (``None``: none, or a
+        # session opened before records were bound).
+        self._employee_id = employee_id
 
     @classmethod
     def start_session(
@@ -60,6 +65,7 @@ class RefreshToken(AggregateRoot[RefreshTokenId]):
         now: datetime,
         idle_ttl: timedelta,
         max_lifetime: timedelta,
+        employee_id: str | None = None,
     ) -> "RefreshToken":
         """The first token of a new session (a login)."""
         session_expires_at = now + max_lifetime
@@ -70,6 +76,7 @@ class RefreshToken(AggregateRoot[RefreshTokenId]):
             family_id=TokenFamilyId.generate(),
             expires_at=min(now + idle_ttl, session_expires_at),
             session_expires_at=session_expires_at,
+            employee_id=employee_id,
         )
 
     def is_revoked(self) -> bool:
@@ -95,8 +102,12 @@ class RefreshToken(AggregateRoot[RefreshTokenId]):
         successor_hash: str,
         now: datetime,
         idle_ttl: timedelta,
+        employee_id: str | None = None,
     ) -> "RefreshToken":
-        """Revoke this token and return its successor, ``idle_ttl`` from now."""
+        """Revoke this token and return its successor, ``idle_ttl`` from now.
+
+        The successor keeps the session's employee record, or binds ``employee_id``.
+        """
         if not self.is_usable(now):
             raise RefreshTokenNotUsableError(
                 "Refresh token is revoked or expired", context=self.id.value
@@ -109,11 +120,16 @@ class RefreshToken(AggregateRoot[RefreshTokenId]):
             family_id=self._family_id,
             expires_at=min(now + idle_ttl, self._session_expires_at),
             session_expires_at=self._session_expires_at,
+            employee_id=employee_id or self._employee_id,
         )
 
     @property
     def user_id(self) -> str:
         return self._user_id
+
+    @property
+    def employee_id(self) -> str | None:
+        return self._employee_id
 
     @property
     def token_hash(self) -> str:

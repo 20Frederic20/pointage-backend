@@ -5,9 +5,10 @@ from auth.application.commands import (
     LogoutCommand,
     RefreshSessionCommand,
     RequestLoginCodeCommand,
+    SelectEmployeeCommand,
     VerifyLoginCodeCommand,
 )
-from auth.application.dtos import PrincipalDTO
+from auth.application.dtos import PrincipalDTO, SelectionRequiredDTO
 from auth.application.ports import EmailSender
 from auth.domain.errors import InvalidLoginCodeError, InvalidRefreshTokenError
 from auth.infrastructure import AuthContainer
@@ -16,6 +17,8 @@ from auth.interface import (
     LoginRequest,
     PrincipalResponse,
     RefreshTokenRequest,
+    SelectEmployeeRequest,
+    SelectionRequiredResponse,
     TokenPairResponse,
     VerifyLoginCodeRequest,
     get_auth,
@@ -31,17 +34,26 @@ def _to_response(dto) -> TokenPairResponse:
     return TokenPairResponse.model_validate(dto, from_attributes=True)
 
 
-@router.post("/login", response_model=TokenPairResponse)
+def _login_response(dto) -> TokenPairResponse | SelectionRequiredResponse:
+    """A token pair, or the list of companies to choose from (``status`` tells which)."""
+    if isinstance(dto, SelectionRequiredDTO):
+        return SelectionRequiredResponse.model_validate(dto, from_attributes=True)
+    return _to_response(dto)
+
+
+@router.post("/login", response_model=TokenPairResponse | SelectionRequiredResponse)
 async def login(
     payload: LoginRequest,
     auth: AuthContainer = Depends(get_auth),  # noqa: B008
-) -> TokenPairResponse:
+) -> TokenPairResponse | SelectionRequiredResponse:
     """Email or employee number + password → access token (15 min) + refresh token.
 
-    Only for accounts that have a password; the others log in by code.
+    Only for accounts that have a password; the others log in by code. An email
+    active in several companies gets ``selection_required`` instead: pick one
+    with ``POST /auth/select-employee``.
     """
     dto = await auth.send(LoginCommand(identifier=payload.identifier, password=payload.password))
-    return _to_response(dto)
+    return _login_response(dto)
 
 
 @router.post("/otp/request", status_code=status.HTTP_202_ACCEPTED)
@@ -63,16 +75,28 @@ async def request_login_code(
         background_tasks.add_task(email_sender.send, email)
 
 
-@router.post("/otp/verify", response_model=TokenPairResponse)
+@router.post("/otp/verify", response_model=TokenPairResponse | SelectionRequiredResponse)
 async def verify_login_code(
     payload: VerifyLoginCodeRequest,
     auth: AuthContainer = Depends(get_auth),  # noqa: B008
-) -> TokenPairResponse:
+) -> TokenPairResponse | SelectionRequiredResponse:
     """Email or employee number + emailed code → the same token pair as a password login."""
     dto = await auth.send(VerifyLoginCodeCommand(identifier=payload.identifier, code=payload.code))
     if dto is None:
         # The handler already committed the failed attempt (see VerifyLoginCodeHandler).
         raise InvalidLoginCodeError("Invalid login code")
+    return _login_response(dto)
+
+
+@router.post("/select-employee", response_model=TokenPairResponse)
+async def select_employee(
+    payload: SelectEmployeeRequest,
+    auth: AuthContainer = Depends(get_auth),  # noqa: B008
+) -> TokenPairResponse:
+    """The company chosen after ``selection_required`` → the token pair of that employee record."""
+    dto = await auth.send(
+        SelectEmployeeCommand(selection_token=payload.selection_token, employee_id=payload.employee_id)
+    )
     return _to_response(dto)
 
 

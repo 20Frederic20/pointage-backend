@@ -42,6 +42,9 @@ async def import_punch_streams(*, state_session: AsyncSession, event_store: Even
             idempotency_key=current.idempotency_key,
             wifi_identifier=current.wifi_identifier,
             created_at=current.created_at,
+            assisted_by_user_id=current.assisted_by_user_id,
+            photo_key=current.photo_key,
+            validation_status=current.validation_status,
         )
         event.restore_identity(event.event_id, current.updated_at)
         time_entry = TimeEntry.rehydrate(time_entry_id, [])

@@ -33,6 +33,25 @@ class RegisterRequest(_CamelSchema):
     role: Role | None = None
 
 
+class OnboardEmployeeRequest(_CamelSchema):
+    """The account and the employee in one form; ``role`` applies to both."""
+
+    email: EmailStr
+    # Omitted: the account logs in with a code sent by email.
+    password: str | None = Field(default=None, min_length=8)
+    first_name: str | None = Field(default=None, max_length=255)
+    last_name: str | None = Field(default=None, max_length=255)
+    directory_id: str
+    role: Role = Field(default=Role.EMPLOYEE)
+    employee_number: str = Field(min_length=10, max_length=20)
+    is_active: bool = Field(default=True)
+    phone: str | None = Field(default=None, min_length=10, max_length=20)
+    # First day of the initial assignment; today when omitted.
+    assignment_start_date: date | None = None
+    # Site of the initial assignment; the directory's principal site when omitted.
+    site_id: str | None = None
+
+
 class CreateEmployeeRequest(_CamelSchema):
 
     user_id: str
@@ -69,9 +88,12 @@ class UpdateProfileRequest(_CamelSchema):
 
 
 class UpdateEmployeeRequest(_CamelSchema):
+    """Edit an employee: names (account-wide), phone and role (per company); omitted = untouched."""
 
-    employee_number: str | None = Field(default=None, min_length=10, max_length=20)
+    first_name: str | None = Field(default=None, min_length=1, max_length=255, alias="firstName")
+    last_name: str | None = Field(default=None, min_length=1, max_length=255, alias="lastName")
     phone: str | None = Field(default=None, min_length=10, max_length=20)
+    role: Role | None = None
 
 
 class CreateDirectoryRequest(_CamelSchema):
@@ -138,6 +160,14 @@ class EmployeeResponse(_CamelSchema):
     is_active: bool = Field(alias="isActive")
     phone: str | None = Field(default=None)
     user_id: str = Field(alias="userId")
+    company_directory_id: str | None = Field(default=None, alias="companyDirectoryId")
+    account_reused: bool = Field(default=False, alias="accountReused")
+    first_name: str | None = Field(default=None, alias="firstName")
+    last_name: str | None = Field(default=None, alias="lastName")
+    company_name: str | None = Field(default=None, alias="companyName")
+    current_site_id: str | None = Field(default=None, alias="currentSiteId")
+    current_site_name: str | None = Field(default=None, alias="currentSiteName")
+    current_assignment_end_date: date | None = Field(default=None, alias="currentAssignmentEndDate")
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
 
@@ -161,6 +191,11 @@ class DirectoryResponse(_CamelSchema):
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
 
 
+class DirectoryListResponse(_CamelSchema):
+    items: list[DirectoryResponse]
+    total: int
+
+
 class SiteResponse(_CamelSchema):
     id: str
     directory_id: str = Field(alias="directoryId")
@@ -180,5 +215,7 @@ class EmployeeAssignmentResponse(_CamelSchema):
     site_id: str = Field(alias="siteId")
     start_date: date = Field(alias="startDate")
     end_date: date | None = Field(default=None, alias="endDate")
+    site_name: str | None = Field(default=None, alias="siteName")
+    directory_name: str | None = Field(default=None, alias="directoryName")
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")

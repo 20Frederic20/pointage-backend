@@ -22,6 +22,7 @@ from ..application.ports import TokenIssuer
 from ..domain.errors import InvalidAccessTokenError
 
 _ACCESS_TOKEN_TYPE = "access"
+_SELECTION_TOKEN_TYPE = "employee_selection"
 
 
 class JwtTokenIssuer(TokenIssuer):
@@ -42,11 +43,12 @@ class JwtTokenIssuer(TokenIssuer):
     def session_max_lifetime(self) -> timedelta:
         return timedelta(days=self._settings.session_max_days)
 
-    def issue_access_token(self, *, user_id: str, role: str) -> str:
+    def issue_access_token(self, *, user_id: str, role: str, employee_id: str | None = None) -> str:
         now = datetime.now(UTC)
         claims = {
             "sub": user_id,
             "role": role,
+            "employee_id": employee_id,
             "typ": _ACCESS_TOKEN_TYPE,
             "iss": self._settings.jwt_issuer,
             "iat": now,
@@ -67,7 +69,38 @@ class JwtTokenIssuer(TokenIssuer):
             raise InvalidAccessTokenError("Invalid or expired access token") from exc
         if claims.get("typ") != _ACCESS_TOKEN_TYPE or not isinstance(claims.get("role"), str):
             raise InvalidAccessTokenError("Invalid or expired access token")
-        return PrincipalDTO(user_id=claims["sub"], role=claims["role"])
+        employee_id = claims.get("employee_id")  # absent from tokens issued before it existed
+        return PrincipalDTO(
+            user_id=claims["sub"],
+            role=claims["role"],
+            employee_id=employee_id if isinstance(employee_id, str) else None,
+        )
+
+    def issue_selection_token(self, *, user_id: str) -> str:
+        now = datetime.now(UTC)
+        claims = {
+            "sub": user_id,
+            "typ": _SELECTION_TOKEN_TYPE,
+            "iss": self._settings.jwt_issuer,
+            "iat": now,
+            "exp": now + timedelta(seconds=self._settings.selection_token_ttl_seconds),
+        }
+        return jwt.encode(claims, self._settings.jwt_secret, algorithm=self._settings.jwt_algorithm)
+
+    def decode_selection_token(self, token: str) -> str:
+        try:
+            claims = jwt.decode(
+                token,
+                self._settings.jwt_secret,
+                algorithms=[self._settings.jwt_algorithm],
+                issuer=self._settings.jwt_issuer,
+                options={"require": ["exp", "iat", "iss", "sub"]},
+            )
+        except jwt.PyJWTError as exc:
+            raise InvalidAccessTokenError("Invalid or expired selection token") from exc
+        if claims.get("typ") != _SELECTION_TOKEN_TYPE:
+            raise InvalidAccessTokenError("Invalid or expired selection token")
+        return claims["sub"]
 
     def new_refresh_token(self) -> str:
         return secrets.token_urlsafe(48)

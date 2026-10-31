@@ -52,6 +52,11 @@ async def _import_anomalies(state_session: AsyncSession, event_store: EventStore
             resolved_at=current.resolved_at,
             description=current.description,
             created_at=current.created_at,
+            employee_id=current.employee_id,
+            assisted_by_user_id=current.assisted_by_user_id,
+            decided_by=current.decided_by,
+            decided_at=current.decided_at,
+            decision_comment=current.decision_comment,
         )
         event.restore_identity(event.event_id, current.updated_at)
         anomaly = Anomaly.rehydrate(anomaly_id, [])

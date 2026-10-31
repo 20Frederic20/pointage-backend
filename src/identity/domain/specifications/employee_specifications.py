@@ -10,7 +10,8 @@ class EmployeeEmployeeNumberIs(Specification[Employee]):
         self._employee_number = employee_number.strip().lower()
 
     def is_satisfied_by(self, candidate: Employee) -> bool:
-        return candidate.employee_number == self._employee_number
+        # Case-insensitive: matricules are stored as typed (often uppercase).
+        return candidate.employee_number.strip().lower() == self._employee_number
 
     @property
     def employee_number(self) -> str:
@@ -43,3 +44,18 @@ class EmployeeRoleIs(Specification[Employee]):
     @property
     def expected(self) -> Role:
         return self._expected
+
+class EmployeeUserIs(Specification[Employee]):
+    """Every record of one account (one per company)."""
+
+    __slots__ = ("_user_id",)
+
+    def __init__(self, user_id: str) -> None:
+        self._user_id = user_id
+
+    def is_satisfied_by(self, candidate: Employee) -> bool:
+        return candidate.user_id.value == self._user_id
+
+    @property
+    def user_id(self) -> str:
+        return self._user_id

@@ -15,6 +15,7 @@ class RefreshTokenModel(BaseModel):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     session_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    employee_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class LoginCodeModel(BaseModel):

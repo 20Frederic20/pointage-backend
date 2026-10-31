@@ -8,6 +8,7 @@ from core.infrastructure.event_store import EventStore
 from ...domain.entities import EmployeeAssignment
 from ...domain.events import (
     EmployeeAssigned,
+    EmployeeAssignmentCancelled,
     EmployeeAssignmentEnded,
     EmployeeAssignmentImported,
 )
@@ -20,6 +21,7 @@ EMPLOYEE_ASSIGNMENT_EVENT_TYPES = {
     "users.employee_assignment.created": EmployeeAssigned,
     "users.employee_assignment.ended": EmployeeAssignmentEnded,
     "users.employee_assignment.imported": EmployeeAssignmentImported,
+    "users.employee_assignment.cancelled": EmployeeAssignmentCancelled,
 }
 
 
@@ -68,12 +70,13 @@ class EventSourcedEmployeeAssignmentRepository(IEmployeeAssignmentRepository):
         )
 
     async def find_by_employee(self, employee_id: EmployeeId) -> list[EmployeeAssignment]:
-        """The employee's assignments, most recent start first."""
+        """The employee's assignments, most recent start first (cancelled ones left out)."""
         ids = await self._store.find_stream_ids(EMPLOYEE_ASSIGNMENT_STREAM, {"employee_id": employee_id.value})
         streams = await self._store.load_streams(ids, EMPLOYEE_ASSIGNMENT_EVENT_TYPES)
         assignments = [
             EmployeeAssignment.rehydrate(EmployeeAssignmentId(stream_id), events) for stream_id, events in streams.items()
         ]
+        assignments = [assignment for assignment in assignments if not assignment.is_cancelled]
         return sorted(assignments, key=lambda assignment: assignment.start_date, reverse=True)
 
     async def save(self, employee_assignment: EmployeeAssignment) -> None:

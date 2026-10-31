@@ -78,6 +78,7 @@ class EmployeeModel(BaseModel):
     user_id: Mapped[str] = mapped_column(
         String(32), ForeignKey("users.id"), nullable=False, index=True
     )
+    company_directory_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class EmployeeAssignmentModel(BaseModel):
@@ -94,4 +95,5 @@ class EmployeeAssignmentModel(BaseModel):
     )
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    cancelled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

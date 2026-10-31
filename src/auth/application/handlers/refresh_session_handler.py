@@ -19,6 +19,7 @@ from ...domain.value_objects import RefreshTokenId
 from ..commands import RefreshSessionCommand
 from ..dtos import TokenPairDTO
 from ..ports import TokenIssuer, UserAccounts
+from ..services import BoundSession
 
 
 class RefreshSessionHandler(CommandHandler[RefreshSessionCommand, TokenPairDTO | None]):
@@ -57,6 +58,11 @@ class RefreshSessionHandler(CommandHandler[RefreshSessionCommand, TokenPairDTO |
         if account is None or not account.is_active:
             token.revoke(now)
             return None, [token]
+        bound = await self._bound_record(token, account)
+        if bound is None:
+            # The record was deactivated, or an unbound session now has a choice to make.
+            token.revoke(now)
+            return None, [token]
 
         raw_refresh_token = self._tokens.new_refresh_token()
         successor = token.rotate(
@@ -64,14 +70,29 @@ class RefreshSessionHandler(CommandHandler[RefreshSessionCommand, TokenPairDTO |
             successor_hash=self._tokens.hash_refresh_token(raw_refresh_token),
             now=now,
             idle_ttl=self._tokens.refresh_token_idle_ttl,
+            employee_id=bound.employee_id,
         )
         await self._accounts.record_activity(account.id)
         tokens = TokenPairDTO(
-            access_token=self._tokens.issue_access_token(user_id=account.id, role=account.role),
+            access_token=self._tokens.issue_access_token(
+                user_id=account.id, role=bound.role, employee_id=bound.employee_id
+            ),
             refresh_token=raw_refresh_token,
             expires_in=self._tokens.access_token_ttl_seconds,
         )
         return tokens, [token, successor]
+
+    async def _bound_record(self, token: RefreshToken, account) -> BoundSession | None:
+        """The session's employee record if still active; an unbound session (opened
+        before records were bound) binds the single active record, if there is one."""
+        employments = await self._accounts.employments(account.id)
+        active = [e for e in employments if e.is_active]
+        if token.employee_id is not None:
+            chosen = next((e for e in active if e.employee_id == token.employee_id), None)
+            return BoundSession(chosen.employee_id, chosen.role) if chosen else None
+        if not employments:
+            return BoundSession(None, account.role)
+        return BoundSession(active[0].employee_id, active[0].role) if len(active) == 1 else None
 
     async def _persist(self, aggregate: AggregateRoot) -> None:
         if isinstance(aggregate, RefreshToken):

@@ -11,6 +11,8 @@ from .schemas import (
     LoginRequest,
     PrincipalResponse,
     RefreshTokenRequest,
+    SelectEmployeeRequest,
+    SelectionRequiredResponse,
     TokenPairResponse,
     VerifyLoginCodeRequest,
 )
@@ -20,6 +22,8 @@ __all__ = [
     "LoginRequest",
     "PrincipalResponse",
     "RefreshTokenRequest",
+    "SelectEmployeeRequest",
+    "SelectionRequiredResponse",
     "TokenPairResponse",
     "VerifyLoginCodeRequest",
     "get_auth",

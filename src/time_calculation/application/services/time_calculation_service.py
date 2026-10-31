@@ -3,7 +3,7 @@ needs (planning, clockings, absences, anomalies, rules, period) and hands it to
 the ``DailyTimeResult`` aggregate. Shared by the day and period handlers; the
 handlers own the transaction and persistence."""
 
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from absences.domain.repositories import IAbsenceRepository
@@ -69,6 +69,7 @@ class TimeCalculationService:
         clockings = [
             (entry.occured_at, entry.entry_type)
             for entry in await self._time_entries.find_by_employee_between(employee_id, day_start, day_end)
+            if entry.counts
         ]
         absences = [
             (absence.start_at, absence.end_at)
@@ -116,15 +117,29 @@ class TimeCalculationService:
                 work_date += timedelta(days=1)
         return results, skipped_validated
 
-    async def _planned_day(self, employee_id: EmployeeId, work_date: date) -> tuple[PlannedDay | None, ZoneInfo]:
-        """The planned hours from the employee's schedule, and the timezone of the day."""
+    async def work_date_of(self, employee_id: EmployeeId, instant: datetime) -> date:
+        """The work date ``instant`` falls on, in the timezone ``calculate_day`` builds
+        the employee's days in (time profile of the schedule; UTC when unscheduled).
+
+        The schedule is looked up on the UTC date of the instant."""
+        _, _, zone = await self._schedule_and_profile(employee_id, instant.astimezone(UTC).date())
+        return instant.astimezone(zone).date()
+
+    async def _schedule_and_profile(self, employee_id: EmployeeId, work_date: date):
+        """The schedule applicable on ``work_date``, its time profile, and the day's timezone."""
         schedule = await self._schedules.find_applicable(employee_id, work_date)
         if schedule is None:
-            return None, ZoneInfo("UTC")
+            return None, None, ZoneInfo("UTC")
         time_profile = await self._time_profiles.find_by_version_id(schedule.time_profile_version_id)
         if time_profile is None:
-            return None, ZoneInfo("UTC")
-        zone = ZoneInfo(time_profile.timezone)
+            return schedule, None, ZoneInfo("UTC")
+        return schedule, time_profile, ZoneInfo(time_profile.timezone)
+
+    async def _planned_day(self, employee_id: EmployeeId, work_date: date) -> tuple[PlannedDay | None, ZoneInfo]:
+        """The planned hours from the employee's schedule, and the timezone of the day."""
+        schedule, time_profile, zone = await self._schedule_and_profile(employee_id, work_date)
+        if time_profile is None:
+            return None, zone
         profile_version = time_profile.find_version(schedule.time_profile_version_id)
         profile_day = profile_version.day_for(work_date) if profile_version is not None else None
         if profile_day is None:

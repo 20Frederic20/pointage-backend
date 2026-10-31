@@ -10,7 +10,8 @@ from ...domain.specifications import (
     EmployeeIsActiveIs,
     EmployeeRoleIs,
 )
-from ..dtos import EmployeeDTO, EmployeesPageDTO
+from ..dtos import EmployeesPageDTO
+from ..services import EmployeeEnricher
 from ..queries import GetEmployeesQuery
 
 
@@ -18,9 +19,10 @@ class GetEmployeesHandler(QueryHandler[GetEmployeesQuery, EmployeesPageDTO]):
     """Combines the directory leaf spec with any optional filters and lets
     the repository translate the tree — no in-Python filtering."""
 
-    def __init__(self, *, employee_repository: IEmployeeRepository) -> None:
+    def __init__(self, *, employee_repository: IEmployeeRepository, enricher: EmployeeEnricher | None = None) -> None:
         super().__init__()
         self._employees = employee_repository
+        self._enricher = enricher or EmployeeEnricher()
 
     async def handle(self, request: GetEmployeesQuery) -> EmployeesPageDTO:
         spec: Specification[Employee] | None = None
@@ -37,6 +39,6 @@ class GetEmployeesHandler(QueryHandler[GetEmployeesQuery, EmployeesPageDTO]):
         )
         total = await self._employees.count(spec)
         return EmployeesPageDTO(
-            items=tuple(EmployeeDTO.from_aggregate(u) for u in employees),
+            items=tuple([await self._enricher.to_dto(employee) for employee in employees]),
             total=total,
         )

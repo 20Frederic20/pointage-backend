@@ -20,3 +20,6 @@ class CreateEmployeeCommand(Command):
     assignment_start_date: date | None = None
     # Site of the initial assignment; the directory's principal site when omitted.
     site_id: str | None = None
+    # Who acts (from the access token): responsible roles only, capped by rank.
+    actor_user_id: str = ""
+    actor_role: str = ""

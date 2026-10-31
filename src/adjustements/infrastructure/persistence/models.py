@@ -17,6 +17,11 @@ class AnomalyModel(BaseModel):
     detected_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
     resolved_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     description: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    employee_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    assisted_by_user_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    decided_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decision_comment: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
 
 class RegularizationRequestModel(BaseModel):

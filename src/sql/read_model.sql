@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS anomalies (
     description text,
     detected_at timestamp with time zone NOT NULL,
     resolved_at timestamp with time zone,
+    employee_id character varying(32),
+    assisted_by_user_id character varying(32),
+    decided_by character varying(32),
+    decided_at timestamp with time zone,
+    decision_comment character varying(512),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     version_id integer DEFAULT 1
@@ -103,6 +108,7 @@ CREATE TABLE IF NOT EXISTS employee_assignments (
     site_id character varying(32) NOT NULL,
     start_date date NOT NULL,
     end_date date,
+    cancelled boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     version_id integer DEFAULT 1 NOT NULL,
@@ -128,6 +134,7 @@ CREATE TABLE IF NOT EXISTS employees (
     phone character varying(20),
     is_active boolean DEFAULT false NOT NULL,
     role character varying(16) NOT NULL,
+    company_directory_id character varying(32),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     version_id integer DEFAULT 1
@@ -177,14 +184,17 @@ CREATE TABLE IF NOT EXISTS time_entries (
     employee_id character varying(32) NOT NULL,
     entry_type character varying(16) NOT NULL,
     occured_at timestamp with time zone NOT NULL,
-    location geography(Point,4326) NOT NULL,
+    location geography(Point,4326),
     location_confidence character varying(16) NOT NULL,
     source character varying(16) NOT NULL,
     idempotency_key character varying(255) NOT NULL,
     wifi_identifier character varying(255),
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone,
-    version_id integer DEFAULT 1 NOT NULL
+    version_id integer DEFAULT 1 NOT NULL,
+    assisted_by_user_id character varying(32),
+    photo_key character varying(255),
+    validation_status character varying(16) DEFAULT 'COUNTED' NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS time_profile_days (

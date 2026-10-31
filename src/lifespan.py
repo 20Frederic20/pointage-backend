@@ -9,6 +9,7 @@ from auth.infrastructure import JwtTokenIssuer, SmtpEmailSender
 from composition import AppContainer
 from core.infrastructure.database import build_engine, build_read_engine, build_session_factory
 from core.infrastructure.events import InProcessEventBus
+from punch.infrastructure.photo_storage import MinioPhotoStorage
 from workers.outbox import build_outbox_worker
 from workers.projections import build_projection_worker
 
@@ -56,6 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         projection_runner=projection_runner,
         token_issuer=JwtTokenIssuer(app.state.auth_settings),
         email_sender=SmtpEmailSender(app.state.mail_settings),
+        photo_storage=MinioPhotoStorage(app.state.storage_settings),
     )
     try:
         yield

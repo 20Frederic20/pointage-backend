@@ -2,9 +2,10 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from absences.interface.routers import absence_types_router, absences_router
+from adjustements.interface.routers import anomalies_router
 from auth.interface.routers import auth_router
 from core.exceptions import register_exception_handlers
-from core.settings import AppSettings, AuthSettings, DatabaseSettings, MailSettings
+from core.settings import AppSettings, AuthSettings, DatabaseSettings, MailSettings, StorageSettings
 from identity.interface.routers import (
     directories_router,
     employee_assignments_router,
@@ -15,7 +16,7 @@ from identity.interface.routers import (
 from lifespan import lifespan
 from periods.interface.routers import periods_router
 from planning.interface.routers import employee_schedules_router, time_profiles_router
-from punch.interface.routers import time_entries_router
+from punch.interface.routers import manager_time_entries_router, time_entries_router
 from time_calculation.interface.routers import (
     calculation_rule_versions_router,
     daily_time_results_router,
@@ -49,6 +50,7 @@ def create_app(
     database_settings: DatabaseSettings | None = None,
     auth_settings: AuthSettings | None = None,
     mail_settings: MailSettings | None = None,
+    storage_settings: StorageSettings | None = None,
 ) -> FastAPI:
     """
     Application factory — middleware, exception handlers, routers, lifespan.
@@ -58,6 +60,7 @@ def create_app(
     # Fails fast at startup when JWT_SECRET is missing (no placeholder secret).
     auth_settings = auth_settings or AuthSettings()
     mail_settings = mail_settings or MailSettings()
+    storage_settings = storage_settings or StorageSettings()
 
     app = FastAPI(
         title=settings.app_name,
@@ -68,6 +71,7 @@ def create_app(
     app.state.database_settings = database_settings
     app.state.auth_settings = auth_settings
     app.state.mail_settings = mail_settings
+    app.state.storage_settings = storage_settings
 
     _add_cors(app, settings)
     register_exception_handlers(app)
@@ -79,6 +83,7 @@ def create_app(
     app.include_router(employees_router)
     app.include_router(employee_assignments_router)
     app.include_router(time_entries_router)
+    app.include_router(manager_time_entries_router)
     app.include_router(absence_types_router)
     app.include_router(absences_router)
     app.include_router(time_profiles_router)
@@ -86,6 +91,7 @@ def create_app(
     app.include_router(periods_router)
     app.include_router(calculation_rule_versions_router)
     app.include_router(daily_time_results_router)
+    app.include_router(anomalies_router)
     return app
 
 

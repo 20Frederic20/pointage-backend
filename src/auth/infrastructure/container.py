@@ -17,6 +17,7 @@ from ..application import (
     LogoutCommand,
     RefreshSessionCommand,
     RequestLoginCodeCommand,
+    SelectEmployeeCommand,
     VerifyLoginCodeCommand,
 )
 from ..application.handlers import (
@@ -24,6 +25,7 @@ from ..application.handlers import (
     LogoutHandler,
     RefreshSessionHandler,
     RequestLoginCodeHandler,
+    SelectEmployeeHandler,
     VerifyLoginCodeHandler,
 )
 from ..application.ports import TokenIssuer, UserAccounts
@@ -52,6 +54,7 @@ class AuthContainer:
         request_map.bind(LogoutCommand, LogoutHandler)
         request_map.bind(RequestLoginCodeCommand, RequestLoginCodeHandler)
         request_map.bind(VerifyLoginCodeCommand, VerifyLoginCodeHandler)
+        request_map.bind(SelectEmployeeCommand, SelectEmployeeHandler)
 
         self._mediator = ApplicationMediator(
             request_map=request_map,
@@ -97,6 +100,14 @@ class AuthContainer:
             return VerifyLoginCodeHandler(
                 unit_of_work=self.unit_of_work,
                 login_code_repository=self.login_code_repository,
+                refresh_token_repository=self.refresh_token_repository,
+                user_accounts=self.user_accounts,
+                token_issuer=self.token_issuer,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is SelectEmployeeHandler:
+            return SelectEmployeeHandler(
+                unit_of_work=self.unit_of_work,
                 refresh_token_repository=self.refresh_token_repository,
                 user_accounts=self.user_accounts,
                 token_issuer=self.token_issuer,

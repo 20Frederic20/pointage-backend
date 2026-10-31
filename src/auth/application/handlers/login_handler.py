@@ -1,7 +1,6 @@
 """Login: verify the password, then issue an access token and a refresh token."""
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
 
 from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.audit import audit
@@ -11,13 +10,13 @@ from identity.application.ports import PasswordHasher
 from ...domain.entities import RefreshToken
 from ...domain.errors import InvalidCredentialsError
 from ...domain.repositories import IRefreshTokenRepository
-from ...domain.value_objects import RefreshTokenId
 from ..commands import LoginCommand
-from ..dtos import TokenPairDTO
+from ..dtos import SelectionRequiredDTO, TokenPairDTO
 from ..ports import TokenIssuer, UserAccounts
+from ..services import SelectionRequired, resolve_employment, start_session
 
 
-class LoginHandler(CommandHandler[LoginCommand, TokenPairDTO]):
+class LoginHandler(CommandHandler[LoginCommand, TokenPairDTO | SelectionRequiredDTO]):
     def __init__(
         self,
         *,
@@ -34,7 +33,9 @@ class LoginHandler(CommandHandler[LoginCommand, TokenPairDTO]):
         self._passwords = password_hasher
         self._tokens = token_issuer
 
-    async def _execute(self, request: LoginCommand) -> tuple[TokenPairDTO, Sequence[AggregateRoot]]:
+    async def _execute(
+        self, request: LoginCommand
+    ) -> tuple[TokenPairDTO | SelectionRequiredDTO, Sequence[AggregateRoot]]:
         account = await self._accounts.find_credentials(request.identifier)
         # Exactly one verify on every path — unknown identifier and code-only
         # account included — so the response time does not reveal which
@@ -46,21 +47,17 @@ class LoginHandler(CommandHandler[LoginCommand, TokenPairDTO]):
             audit.warning("action=LOGIN_PASSWORD identifier=%s status=FAIL", request.identifier)
             raise InvalidCredentialsError("Invalid identifier or password")
 
-        raw_refresh_token = self._tokens.new_refresh_token()
-        refresh_token = RefreshToken.start_session(
-            RefreshTokenId.generate(),
-            user_id=account.id,
-            token_hash=self._tokens.hash_refresh_token(raw_refresh_token),
-            now=datetime.now(UTC),
-            idle_ttl=self._tokens.refresh_token_idle_ttl,
-            max_lifetime=self._tokens.session_max_lifetime,
-        )
-        await self._accounts.record_activity(account.id)
-        tokens = TokenPairDTO(
-            access_token=self._tokens.issue_access_token(user_id=account.id, role=account.role),
-            refresh_token=raw_refresh_token,
-            expires_in=self._tokens.access_token_ttl_seconds,
-        )
+        outcome = resolve_employment(account, await self._accounts.employments(account.id))
+        if outcome is None:
+            audit.warning("action=LOGIN_PASSWORD identifier=%s status=FAIL reason=inactive_record", request.identifier)
+            raise InvalidCredentialsError("Invalid identifier or password")
+        if isinstance(outcome, SelectionRequired):
+            audit.info("action=LOGIN_PASSWORD identifier=%s user_id=%s status=CHOICE", request.identifier, account.id)
+            return SelectionRequiredDTO(
+                selection_token=self._tokens.issue_selection_token(user_id=account.id),
+                employments=outcome.employments,
+            ), []
+        tokens, refresh_token = await start_session(self._tokens, self._accounts, user_id=account.id, bound=outcome)
         audit.info("action=LOGIN_PASSWORD identifier=%s user_id=%s status=OK", request.identifier, account.id)
         return tokens, [refresh_token]
 

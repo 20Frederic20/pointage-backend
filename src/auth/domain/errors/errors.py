@@ -54,3 +54,11 @@ class RefreshTokenNotUsableError(DomainError):
     code = "REFRESH_TOKEN_NOT_USABLE"
     http_status = 401
     severity = Severity.WARNING
+
+
+class NoActiveEmploymentError(DomainError):
+    """Raised when the account's employee records are all deactivated, or the chosen
+    record is not one of its active records."""
+
+    code = "NO_ACTIVE_EMPLOYMENT"
+    http_status = 403

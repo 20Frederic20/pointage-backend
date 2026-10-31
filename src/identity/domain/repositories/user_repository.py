@@ -25,14 +25,14 @@ class IUserRepository(IRepository[User, UserId]):
     @abstractmethod
     async def find(
         self,
-        spec: Specification[User],
+        spec: Specification[User] | None,
         *,
         limit: int = 50,
         offset: int = 0,
     ) -> list[User]:
         """Users matching ``spec``, paged — the specification is translated
         at the database by the infrastructure adapter, never filtered in
-        Python after loading everything.
+        Python after loading everything. ``None`` matches every user.
         """
         ...
 
@@ -49,7 +49,7 @@ class IUserRepository(IRepository[User, UserId]):
         ...
 
     @abstractmethod
-    async def count(self, spec: Specification[User]) -> int:
+    async def count(self, spec: Specification[User] | None) -> int:
         """Users matching ``spec`` — the ``total`` of a paged listing, before
-        limit/offset are applied."""
+        limit/offset are applied. ``None`` matches every user."""
         ...

@@ -27,6 +27,7 @@ from identity.application.handlers.create_directory_handler import (
     CreateDirectoryHandler,
 )
 from identity.application.handlers.get_employees_handler import GetEmployeesHandler
+from identity.application.services import EmployeeEnricher
 from identity.infrastructure.persistence.employee_repository import EmployeeRepository
 
 from ..application import (
@@ -47,6 +48,8 @@ from ..application import (
     DeactivateUserHandler,
     EndEmployeeAssignmentCommand,
     EndEmployeeAssignmentHandler,
+    GetDirectoriesHandler,
+    GetDirectoriesQuery,
     GetDirectoryByIdHandler,
     GetDirectoryByIdQuery,
     GetDirectorySitesHandler,
@@ -55,6 +58,10 @@ from ..application import (
     GetEmployeeAssignmentsQuery,
     GetEmployeeByEmployeeNumberHandler,
     GetEmployeeByEmployeeNumberQuery,
+    GetEmployeesByUserIdHandler,
+    GetEmployeesByUserIdQuery,
+    GetEmployeeByIdHandler,
+    GetEmployeeByIdQuery,
     GetEmployeesQuery,
     GetSiteByIdHandler,
     GetSiteByIdQuery,
@@ -66,12 +73,18 @@ from ..application import (
     GetUsersQuery,
     MakeSitePrincipalCommand,
     MakeSitePrincipalHandler,
+    OnboardEmployeeCommand,
+    OnboardEmployeeHandler,
     RecordUserActivityCommand,
     RecordUserActivityHandler,
     RegisterUserCommand,
     RegisterUserHandler,
     UpdateEmployeeCommand,
     UpdateEmployeeHandler,
+    EditEmployeeCommand,
+    EditEmployeeHandler,
+    SetEmployeeActiveCommand,
+    SetEmployeeActiveHandler,
     UpdateUserProfileCommand,
     UpdateUserProfileHandler,
 )
@@ -121,7 +134,10 @@ class UsersContainer:
         request_map = RequestMap()
         request_map.bind(CreateDirectoryCommand, CreateDirectoryHandler)
         request_map.bind(CreateEmployeeCommand, CreateEmployeeHandler)
+        request_map.bind(OnboardEmployeeCommand, OnboardEmployeeHandler)
         request_map.bind(UpdateEmployeeCommand, UpdateEmployeeHandler)
+        request_map.bind(EditEmployeeCommand, EditEmployeeHandler)
+        request_map.bind(SetEmployeeActiveCommand, SetEmployeeActiveHandler)
         request_map.bind(CreateSiteCommand, CreateSiteHandler)
         request_map.bind(ActivateSiteCommand, ActivateSiteHandler)
         request_map.bind(DeactivateSiteCommand, DeactivateSiteHandler)
@@ -137,16 +153,27 @@ class UsersContainer:
         request_map.bind(GetUserByIdQuery, GetUserByIdHandler)
         request_map.bind(GetUsersQuery, GetUsersHandler)
         request_map.bind(GetEmployeesQuery, GetEmployeesHandler)
+        request_map.bind(GetEmployeeByIdQuery, GetEmployeeByIdHandler)
+        request_map.bind(GetDirectoriesQuery, GetDirectoriesHandler)
         request_map.bind(GetDirectoryByIdQuery, GetDirectoryByIdHandler)
         request_map.bind(GetSiteByIdQuery, GetSiteByIdHandler)
         request_map.bind(GetDirectorySitesQuery, GetDirectorySitesHandler)
         request_map.bind(GetEmployeeAssignmentsQuery, GetEmployeeAssignmentsHandler)
         request_map.bind(GetEmployeeByEmployeeNumberQuery, GetEmployeeByEmployeeNumberHandler)
+        request_map.bind(GetEmployeesByUserIdQuery, GetEmployeesByUserIdHandler)
 
         self._mediator = ApplicationMediator(
             request_map=request_map,
             container=HandlerContainer(self._resolve_handler),
             event_emitter=EventBusEmitter(self.event_bus),
+        )
+
+    def _enricher(self) -> EmployeeEnricher:
+        return EmployeeEnricher(
+            user_repository=self.user_read_repository,
+            directory_repository=self.directory_read_repository,
+            employee_assignment_repository=self.employee_assignment_read_repository,
+            site_repository=self.site_read_repository,
         )
 
     def _resolve_handler(self, handler_type: type):
@@ -185,6 +212,30 @@ class UsersContainer:
                 site_repository=self.site_repository,
                 event_outbox=self.event_outbox,
             )
+        if handler_type is OnboardEmployeeHandler:
+            return OnboardEmployeeHandler(
+                unit_of_work=self.unit_of_work,
+                user_repository=self.user_repository,
+                employee_repository=self.employee_repository,
+                employee_assignment_repository=self.employee_assignment_repository,
+                directory_repository=self.directory_repository,
+                site_repository=self.site_repository,
+                password_hasher=self.password_hasher,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is EditEmployeeHandler:
+            return EditEmployeeHandler(
+                unit_of_work=self.unit_of_work,
+                employee_repository=self.employee_repository,
+                user_repository=self.user_repository,
+                event_outbox=self.event_outbox,
+            )
+        if handler_type is SetEmployeeActiveHandler:
+            return SetEmployeeActiveHandler(
+                unit_of_work=self.unit_of_work,
+                employee_repository=self.employee_repository,
+                event_outbox=self.event_outbox,
+            )
         if handler_type is UpdateEmployeeHandler:
             return UpdateEmployeeHandler(
                 unit_of_work=self.unit_of_work,
@@ -193,7 +244,11 @@ class UsersContainer:
             )
         if handler_type is GetEmployeesHandler:
             return GetEmployeesHandler(
-                employee_repository=self.employee_read_repository
+                employee_repository=self.employee_read_repository, enricher=self._enricher()
+            )
+        if handler_type is GetEmployeeByIdHandler:
+            return GetEmployeeByIdHandler(
+                employee_repository=self.employee_read_repository, enricher=self._enricher()
             )
         if handler_type is CreateSiteHandler:
             return CreateSiteHandler(
@@ -221,6 +276,7 @@ class UsersContainer:
             return EndEmployeeAssignmentHandler(
                 unit_of_work=self.unit_of_work,
                 employee_assignment_repository=self.employee_assignment_repository,
+                employee_repository=self.employee_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is GetUserByEmailHandler:
@@ -229,6 +285,8 @@ class UsersContainer:
             return GetUserByIdHandler(user_repository=self.user_read_repository)
         if handler_type is GetUsersHandler:
             return GetUsersHandler(user_repository=self.user_read_repository)
+        if handler_type is GetDirectoriesHandler:
+            return GetDirectoriesHandler(directory_repository=self.directory_read_repository)
         if handler_type is GetDirectoryByIdHandler:
             return GetDirectoryByIdHandler(
                 directory_repository=self.directory_read_repository
@@ -242,7 +300,13 @@ class UsersContainer:
             )
         if handler_type is GetEmployeeAssignmentsHandler:
             return GetEmployeeAssignmentsHandler(
-                employee_assignment_repository=self.employee_assignment_read_repository
+                employee_assignment_repository=self.employee_assignment_read_repository,
+                site_repository=self.site_read_repository,
+                directory_repository=self.directory_read_repository,
+            )
+        if handler_type is GetEmployeesByUserIdHandler:
+            return GetEmployeesByUserIdHandler(
+                employee_repository=self.employee_read_repository, enricher=self._enricher()
             )
         if handler_type is GetEmployeeByEmployeeNumberHandler:
             return GetEmployeeByEmployeeNumberHandler(employee_repository=self.employee_read_repository)

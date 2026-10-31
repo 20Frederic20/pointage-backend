@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from core.application import DTO
 from identity.domain import Role
@@ -14,6 +14,16 @@ class EmployeeDTO(DTO):
     role: Role
     is_active: bool
     phone: str | None = None
+    company_directory_id: str | None = None
+    # Onboarding only: the email already had an account, a new record was added to it.
+    account_reused: bool = False
+    # Read side only (EmployeeEnricher): what the screens show next to the record.
+    first_name: str | None = None
+    last_name: str | None = None
+    company_name: str | None = None
+    current_site_id: str | None = None
+    current_site_name: str | None = None
+    current_assignment_end_date: date | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -26,6 +36,7 @@ class EmployeeDTO(DTO):
             is_active=employee.is_active,
             phone=employee.phone,
             employee_number=employee.employee_number,
+            company_directory_id=employee.company_directory_id.value if employee.company_directory_id else None,
             created_at=employee.created_at,
             updated_at=employee.updated_at,
         )

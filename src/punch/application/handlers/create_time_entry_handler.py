@@ -5,7 +5,8 @@ from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.audit import audit
 from core.domain.entity import AggregateRoot
 from core.domain.errors import NotFoundError
-from identity.domain import UserId
+from identity.domain import EmployeeId, UserId
+from identity.domain.errors import EmployeeInactiveError
 from identity.domain.entities import Employee, Site
 from identity.domain.repositories import (
     IEmployeeAssignmentRepository,
@@ -14,14 +15,11 @@ from identity.domain.repositories import (
 )
 from punch.application.commands import CreateTimeEntryCommand
 from punch.application.dtos import TimeEntryDTO
+from punch.application.services import punch_rules
 from punch.domain import LocationConfidence, TimeEntryId
 from punch.domain.entities import TimeEntry
 from punch.domain.errors import EmployeeNotAssignedError, TooFarFromWorkplaceError
 from punch.domain.repositories import ITimeEntryRepository
-from punch.domain.services.distance_calculator import DistanceCalculator
-from punch.domain.services.entry_type_resolver import EntryTypeResolver
-
-MAX_DISTANCE_METERS = 500
 
 
 class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO]):
@@ -44,37 +42,30 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         self.employee_assignment_repository = employee_assignment_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
-        employee: Employee | None = await self.employee_repository.find_by_user_id(UserId(request.user_id))
+        employee = await self._session_employee(request)
         if not employee:
             audit.warning("action=PUNCH user_id=%s status=FAIL reason=no_employee", request.user_id)
             raise NotFoundError("No employee record for this account", context=request.user_id)
+        if not employee.is_active:
+            audit.warning("action=PUNCH user_id=%s employee=%s status=FAIL reason=inactive", request.user_id, employee.employee_number)
+            raise EmployeeInactiveError("This employee record is deactivated", context=employee.id.value)
 
         # The reference location is the directory of the assignment covering today.
-        assignment = await self.employee_assignment_repository.find_active(employee.id, datetime.now(UTC).date())
-        if assignment is None:
+        try:
+            site: Site = await punch_rules.resolve_today_site(
+                employee, self.employee_assignment_repository, self.site_repository
+            )
+        except EmployeeNotAssignedError:
             audit.warning("action=PUNCH user_id=%s employee=%s status=FAIL reason=not_assigned", request.user_id, employee.employee_number)
-            raise EmployeeNotAssignedError(
-                f"Employee {employee.employee_number} has no active assignment today",
-                context=employee.id.value,
-            )
-        site: Site = await self.site_repository.get_by_id(assignment.site_id)
+            raise
 
-        distance = DistanceCalculator.calculate(
-            latitude_1=request.location.latitude,
-            longitude_1=request.location.longitude,
-            latitude_2=site.location.latitude,
-            longitude_2=site.location.longitude,
-        )
+        try:
+            distance = punch_rules.ensure_within_site(request.location, site, employee_id=employee.id)
+        except TooFarFromWorkplaceError as exc:
+            audit.warning("action=PUNCH user_id=%s employee=%s status=FAIL reason=too_far distance=%.0fm", request.user_id, employee.employee_number, exc.distance_meters)
+            raise
 
-        if distance > MAX_DISTANCE_METERS:
-            audit.warning("action=PUNCH user_id=%s employee=%s status=FAIL reason=too_far distance=%.0fm", request.user_id, employee.employee_number, distance)
-            raise TooFarFromWorkplaceError(
-                f"Employee {employee.id} is {distance:.0f} m from the workplace (max {MAX_DISTANCE_METERS} m)",
-                context=employee.id.value,
-            )
-
-        last_entry: TimeEntry | None = await self.time_entry_repository.find_last_by_employee_id(employee.id)
-        entry_type = EntryTypeResolver.resolve(last_entry, datetime.now(UTC))
+        entry_type = await punch_rules.next_entry_type(employee.id, self.time_entry_repository, datetime.now(UTC))
 
         location_confidence = (
             LocationConfidence("HIGH")
@@ -94,6 +85,16 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         )
         audit.info("action=PUNCH user_id=%s employee=%s type=%s distance=%.0fm status=OK", request.user_id, employee.employee_number, entry_type.value, distance)
         return TimeEntryDTO.from_aggregate(time_entry), [time_entry]
+
+    async def _session_employee(self, request: CreateTimeEntryCommand) -> Employee | None:
+        """The record the session works with, and only if it belongs to the caller."""
+        if request.employee_id is None:
+            return await self.employee_repository.find_by_user_id(UserId(request.user_id))
+        try:
+            employee = await self.employee_repository.get_by_id(EmployeeId(request.employee_id))
+        except NotFoundError:
+            return None
+        return employee if employee.user_id == UserId(request.user_id) else None
 
     async def _persist(self, aggregate: AggregateRoot) -> None:
         if isinstance(aggregate, TimeEntry):

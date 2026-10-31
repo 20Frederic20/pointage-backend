@@ -2,6 +2,7 @@ from .login_handler import LoginHandler
 from .logout_handler import LogoutHandler
 from .refresh_session_handler import RefreshSessionHandler
 from .request_login_code_handler import RequestLoginCodeHandler
+from .select_employee_handler import SelectEmployeeHandler
 from .verify_login_code_handler import VerifyLoginCodeHandler
 
 __all__ = [
@@ -9,5 +10,6 @@ __all__ = [
     "LogoutHandler",
     "RefreshSessionHandler",
     "RequestLoginCodeHandler",
+    "SelectEmployeeHandler",
     "VerifyLoginCodeHandler",
 ]

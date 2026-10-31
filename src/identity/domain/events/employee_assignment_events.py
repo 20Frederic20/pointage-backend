@@ -130,3 +130,24 @@ class EmployeeAssignmentImported(BaseEvent[EmployeeAssignmentId]):
             end_date=decode_date(payload["end_date"]),
             created_at=decode_datetime(payload["created_at"]),
         )
+
+
+class EmployeeAssignmentCancelled(BaseEvent[EmployeeAssignmentId]):
+    """A same-day transfer replaced this assignment: it never applies."""
+
+    def __init__(self, employee_assignment_id: EmployeeAssignmentId) -> None:
+        super().__init__()
+        self.employee_assignment_id = employee_assignment_id
+
+    def get_aggregate_id(self) -> EmployeeAssignmentId:
+        return self.employee_assignment_id
+
+    def get_event_name(self) -> str:
+        return "users.employee_assignment.cancelled"
+
+    def to_payload(self) -> dict:
+        return {"employee_assignment_id": self.employee_assignment_id.value}
+
+    @classmethod
+    def from_payload(cls, payload: dict) -> "EmployeeAssignmentCancelled":
+        return cls(EmployeeAssignmentId(payload["employee_assignment_id"]))

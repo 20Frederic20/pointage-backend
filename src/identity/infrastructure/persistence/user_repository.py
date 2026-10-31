@@ -50,21 +50,19 @@ class UserRepository(IUserRepository):
         return self._to_aggregate(row) if row is not None else None
 
     async def find(
-        self, spec: Specification[User], *, limit: int = 50, offset: int = 0
+        self, spec: Specification[User] | None, *, limit: int = 50, offset: int = 0
     ) -> list[User]:
-        stmt = (
-            select(UserModel)
-            .where(self._translator.translate(spec))
-            .limit(limit)
-            .offset(offset)
-        )
+        stmt = select(UserModel)
+        if spec is not None:
+            stmt = stmt.where(self._translator.translate(spec))
+        stmt = stmt.order_by(UserModel.created_at, UserModel.id).limit(limit).offset(offset)
         rows = (await self._session.scalars(stmt)).all()
         return [self._to_aggregate(row) for row in rows]
 
-    async def count(self, spec: Specification[User]) -> int:
-        stmt = select(func.count()).select_from(UserModel).where(
-            self._translator.translate(spec)
-        )
+    async def count(self, spec: Specification[User] | None) -> int:
+        stmt = select(func.count()).select_from(UserModel)
+        if spec is not None:
+            stmt = stmt.where(self._translator.translate(spec))
         return await self._session.scalar(stmt) or 0
 
     async def exists_any(self) -> bool:

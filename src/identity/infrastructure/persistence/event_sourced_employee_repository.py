@@ -5,7 +5,15 @@ from core.infrastructure.event_store import EventStore
 from identity.domain.repositories.employee_repository import IEmployeeWriteRepository
 
 from ...domain.entities import Employee
-from ...domain.events import EmployeeCreated, EmployeeImported, EmployeeUpdated
+from ...domain.events import (
+    EmployeeActivated,
+    EmployeeCompanySet,
+    EmployeeCreated,
+    EmployeeDeactivated,
+    EmployeeImported,
+    EmployeeRoleChanged,
+    EmployeeUpdated,
+)
 from ...domain.value_objects.ids import EmployeeId, UserId
 
 EMPLOYEE_STREAM = "identity.employee"
@@ -14,6 +22,10 @@ EMPLOYEE_EVENT_TYPES = {
     "users.employee.created": EmployeeCreated,
     "users.employee.updated": EmployeeUpdated,
     "users.employee.imported": EmployeeImported,
+    "users.employee.role_changed": EmployeeRoleChanged,
+    "users.employee.deactivated": EmployeeDeactivated,
+    "users.employee.activated": EmployeeActivated,
+    "users.employee.company_set": EmployeeCompanySet,
 }
 
 EMPLOYEE_NUMBER_KEY = "identity.employee.employee_number"
@@ -37,11 +49,28 @@ class EventSourcedEmployeeRepository(IEmployeeWriteRepository):
     async def exists_by_employee_number(self, employee_number: str) -> bool:
         return await self._store.owner(EMPLOYEE_NUMBER_KEY, employee_number) is not None
 
-    async def find_by_user_id(self, user_id: UserId) -> Employee | None:
-        # employees.user_id is not unique: prefer the active, most recent record.
+    async def find_all_by_user_id(self, user_id: UserId) -> list[Employee]:
+        """Every record of a person: one per company they work (or worked) for."""
         ids = await self._store.find_stream_ids(EMPLOYEE_STREAM, {"user_id": user_id.value})
         streams = await self._store.load_streams(ids, EMPLOYEE_EVENT_TYPES)
-        employees = [Employee.rehydrate(EmployeeId(stream_id), events) for stream_id, events in streams.items()]
+        return [Employee.rehydrate(EmployeeId(stream_id), events) for stream_id, events in streams.items()]
+
+    async def find_by_user_id(self, user_id: UserId) -> Employee | None:
+        # employees.user_id is not unique: prefer the active, most recent record.
+        employees = await self.find_all_by_user_id(user_id)
+        if not employees:
+            return None
+        return max(employees, key=lambda employee: (employee.is_active, employee.created_at))
+
+    async def find_by_employee_number(self, employee_number: str) -> Employee | None:
+        """The employee whose *current* number is ``employee_number`` (the active one first)."""
+        ids = await self._store.find_stream_ids(EMPLOYEE_STREAM, {"employee_number": employee_number})
+        streams = await self._store.load_streams(ids, EMPLOYEE_EVENT_TYPES)
+        employees = [
+            employee
+            for stream_id, events in streams.items()
+            if (employee := Employee.rehydrate(EmployeeId(stream_id), events)).employee_number == employee_number
+        ]
         if not employees:
             return None
         return max(employees, key=lambda employee: (employee.is_active, employee.created_at))

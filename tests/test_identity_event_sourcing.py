@@ -131,3 +131,83 @@ def test_every_identity_event_has_a_type_and_a_mapper():
     every = {**USER_EVENT_TYPES, **DIRECTORY_EVENT_TYPES, **SITE_EVENT_TYPES, **EMPLOYEE_EVENT_TYPES,
              **EMPLOYEE_ASSIGNMENT_EVENT_TYPES}
     assert set(every.values()) == set(USERS_EVENT_MAPPERS)
+
+
+def test_employee_role_change_activation_and_company_replay():
+    employee = Employee.create(EmployeeId.generate(), user_id=UserId.generate(), employee_number="0000000003",
+                               is_active=True, company_directory_id=DirectoryId("dir1"))
+    employee.change_role(Role.HR)
+    employee.deactivate()
+    employee.activate()
+    employee.set_company(DirectoryId("dir2"))
+    assert len(employee.domain_events) == 5
+    fields = ("user_id", "employee_number", "is_active", "role", "phone", "company_directory_id")
+    replayed = _replay(employee, EMPLOYEE_EVENT_TYPES)
+    assert _state(replayed, *fields) == _state(employee, *fields)
+    assert (replayed.role, replayed.is_active, replayed.company_directory_id) == (Role.HR, True, DirectoryId("dir2"))
+
+
+def test_deactivate_twice_or_activate_active_is_conflict():
+    import pytest
+
+    from identity.domain.errors import EmployeeAlreadyActiveError, EmployeeAlreadyInactiveError
+
+    employee = Employee.create(EmployeeId.generate(), user_id=UserId.generate(), employee_number="0000000004",
+                               is_active=True)
+    with pytest.raises(EmployeeAlreadyActiveError):
+        employee.activate()
+    employee.deactivate()
+    with pytest.raises(EmployeeAlreadyInactiveError):
+        employee.deactivate()
+    assert (EmployeeAlreadyActiveError.code, EmployeeAlreadyInactiveError.code) == (
+        "EMPLOYEE_ALREADY_ACTIVE", "EMPLOYEE_ALREADY_INACTIVE")
+    assert EmployeeAlreadyActiveError.http_status == EmployeeAlreadyInactiveError.http_status == 409
+
+
+def test_change_role_to_same_role_records_nothing():
+    employee = Employee.create(EmployeeId.generate(), user_id=UserId.generate(), employee_number="0000000005",
+                               is_active=True, role=Role.MANAGER)
+    employee.change_role(Role.MANAGER)
+    employee.change_phone(None)
+    assert len(employee.domain_events) == 1
+
+
+def test_change_phone_updates_the_phone():
+    employee = Employee.create(EmployeeId.generate(), user_id=UserId.generate(), employee_number="0000000006",
+                               is_active=True)
+    employee.change_phone("0197000000")
+    assert _replay(employee, EMPLOYEE_EVENT_TYPES).phone == "0197000000"
+
+
+def test_legacy_employee_created_payload_has_no_company():
+    from identity.domain.events import EmployeeCreated
+
+    employee = Employee.create(EmployeeId.generate(), user_id=UserId.generate(), employee_number="0000000007",
+                               is_active=True, company_directory_id=DirectoryId("dir1"))
+    payload = employee.domain_events[0].to_payload()
+    del payload["company_directory_id"]
+    legacy = Employee.rehydrate(employee.id, [EmployeeCreated.from_payload(payload)])
+    assert legacy.company_directory_id is None
+
+
+def test_cancelled_assignment_replays_and_is_never_active():
+    assignment = EmployeeAssignment.assign(EmployeeAssignmentId.generate(), employee_id=EmployeeId.generate(),
+                                           directory_id=DirectoryId("dir1"), site_id=SiteId("site1"),
+                                           start_date=date(2026, 11, 2))
+    assignment.cancel()
+    replayed = _replay(assignment, EMPLOYEE_ASSIGNMENT_EVENT_TYPES)
+    assert replayed.is_cancelled
+    assert not replayed.is_active_on(date(2026, 11, 2))
+
+
+def test_cancel_twice_is_conflict():
+    import pytest
+
+    from core.domain.errors import ConflictError
+
+    assignment = EmployeeAssignment.assign(EmployeeAssignmentId.generate(), employee_id=EmployeeId.generate(),
+                                           directory_id=DirectoryId("dir1"), site_id=SiteId("site1"),
+                                           start_date=date(2026, 11, 2))
+    assignment.cancel()
+    with pytest.raises(ConflictError):
+        assignment.cancel()

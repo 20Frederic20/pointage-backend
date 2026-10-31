@@ -14,7 +14,9 @@ from core.domain.events import BaseEvent
 from ..domain.events import (
     AnomalyCreated,
     AnomalyImported,
+    AnomalyRejected,
     AnomalyResolved,
+    AnomalyValidated,
     RegularizationRequestCreated,
     RegularizationRequestImported,
 )
@@ -82,6 +84,9 @@ ADJUSTMENTS_EVENT_MAPPERS: dict[type, object] = {
     AnomalyCreated: to_anomaly_created,
     AnomalyResolved: to_anomaly_resolved,
     RegularizationRequestCreated: to_regularization_request_created,
+    # Decisions only change the read model for now.
+    AnomalyValidated: None,
+    AnomalyRejected: None,
     # Takeover of the state tables: stored, never published.
     AnomalyImported: None,
     RegularizationRequestImported: None,
