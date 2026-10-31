@@ -15,6 +15,8 @@ class EmployeeDTO(DTO):
     is_active: bool
     phone: str | None = None
     company_directory_id: str | None = None
+    # Onboarding only: the email already had an account, a new record was added to it.
+    account_reused: bool = False
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

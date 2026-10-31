@@ -67,14 +67,14 @@ async def create(
     "/onboard",
     response_model=EmployeeResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(Role.ADMIN))],
 )
 async def onboard(
     payload: OnboardEmployeeRequest,
+    principal: PrincipalDTO = Depends(require_role(Role.MANAGER, Role.HR, Role.PAYROLL, Role.ADMIN)),  # noqa: B008
     users: UsersContainer = Depends(get_users),  # noqa: B008
 ) -> EmployeeResponse:
-    """Create the account and the employee together (ADMIN only): both are
-    saved, or neither — a taken email or number leaves no account behind."""
+    """Create the employee record in a company, with its account unless the email
+    already has one (``accountReused``). Everything is saved, or nothing."""
     dto = await users.send(
         OnboardEmployeeCommand(
             email=payload.email,
@@ -88,6 +88,8 @@ async def onboard(
             role=payload.role,
             assignment_start_date=payload.assignment_start_date,
             site_id=payload.site_id,
+            actor_user_id=principal.user_id,
+            actor_role=principal.role,
         )
     )
     return _employee_reponse(dto)

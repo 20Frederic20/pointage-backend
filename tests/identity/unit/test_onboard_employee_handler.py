@@ -13,7 +13,6 @@ from identity.domain import DirectoryId, Role, SiteId, SiteKind, UserId
 from identity.domain.entities import Directory, Site, User
 from identity.domain.errors import (
     DirectoryHasNoSiteError,
-    EmailAlreadyRegisteredError,
     EmployeeWithThisNumberAlreadyExistsError,
 )
 from identity.domain.value_objects.location import Location
@@ -44,9 +43,13 @@ class FakeUsers:
 
 
 class FakeEmployees:
-    def __init__(self, *numbers):
+    def __init__(self, *numbers, records=()):
         self.numbers = set(numbers)
+        self.records = list(records)
         self.saved = []
+
+    async def find_all_by_user_id(self, user_id):
+        return [e for e in self.records if e.user_id == user_id]
 
     async def exists_by_employee_number(self, number):
         return number in self.numbers
@@ -96,12 +99,19 @@ PRINCIPAL = Site.create(
 )
 
 
-def build(*, users=(), numbers=(), sites=(PRINCIPAL,)):
+DEPARTMENT = Directory(DirectoryId("dirdept"), name="Agence", code="AG", parent_directory_id=DIRECTORY.id)
+DEPARTMENT_SITE = Site.create(
+    SiteId.generate(), directory_id=DEPARTMENT.id, name="Agence", location=Location(6.3654, 2.4183),
+    kind=SiteKind.PRINCIPAL,
+)
+
+
+def build(*, users=(), numbers=(), sites=(PRINCIPAL, DEPARTMENT_SITE), records=()):
     repos = {
         "user_repository": FakeUsers(*users),
-        "employee_repository": FakeEmployees(*numbers),
+        "employee_repository": FakeEmployees(*numbers, records=records),
         "employee_assignment_repository": FakeAssignments(),
-        "directory_repository": FakeDirectories(DIRECTORY),
+        "directory_repository": FakeDirectories(DIRECTORY, DEPARTMENT),
         "site_repository": FakeSites(*sites),
     }
     handler = OnboardEmployeeHandler(unit_of_work=NoopUnitOfWork(), password_hasher=FakeHasher(), **repos)
@@ -118,6 +128,8 @@ def command(**overrides):
         "role": Role.MANAGER,
         "is_active": True,
         "assignment_start_date": date(2026, 10, 1),
+        "actor_user_id": "usr_admin",
+        "actor_role": "ADMIN",
     }
     return OnboardEmployeeCommand(**(values | overrides))
 
@@ -157,11 +169,51 @@ def test_role_defaults_to_employee_for_both():
     assert repos["employee_repository"].saved[0].role == Role.EMPLOYEE
 
 
-def test_taken_email_saves_nothing():
-    taken = User.register_owner(UserId.generate(), email="ana@pointage.bj", password_hash=None, role=Role.HR)
-    handler, repos = build(users=(taken,))
-    with pytest.raises(EmailAlreadyRegisteredError):
-        run(handler.handle(command(email=" Ana@Pointage.BJ ")))
+def test_onboard_with_existing_email_reuses_account_and_creates_second_record():
+    existing = User.register_owner(UserId.generate(), email="ana@pointage.bj", password_hash="h", role=Role.HR,
+                                   first_name="Ana", last_name="Dossou")
+    handler, repos = build(users=(existing,))
+    dto = run(handler.handle(command(email=" Ana@Pointage.BJ ", first_name="Ignored", employee_number="EMP0000002")))
+    assert repos["user_repository"].saved == []  # the account is reused untouched
+    [employee] = repos["employee_repository"].saved
+    assert (employee.user_id, employee.employee_number, employee.company_directory_id) == (
+        existing.id, "EMP0000002", DIRECTORY.id)
+    assert (dto.account_reused, existing.first_name, existing.role) == (True, "Ana", Role.HR)
+
+
+def test_onboard_same_company_twice_is_409():
+    from identity.domain import EmployeeId
+    from identity.domain.entities import Employee
+    from identity.domain.errors import AlreadyActiveInCompanyError
+
+    existing = User.register_owner(UserId.generate(), email="ana@pointage.bj", password_hash=None, role=Role.HR)
+    record = Employee(EmployeeId.generate(), user_id=existing.id, employee_number="EMP0000001", is_active=True,
+                      company_directory_id=DIRECTORY.id)
+    handler, repos = build(users=(existing,), records=(record,))
+    with pytest.raises(AlreadyActiveInCompanyError):
+        run(handler.handle(command(employee_number="EMP0000002", directory_id=DEPARTMENT.id.value)))
+    assert saved(repos) == (0, 0, 0)
+
+
+def test_onboard_defaults_to_active():
+    handler, repos = build()
+    run(handler.handle(command(is_active=None)))
+    assert repos["employee_repository"].saved[0].is_active is True
+
+
+def test_onboard_stores_company_root_for_subdirectory():
+    handler, repos = build()
+    dto = run(handler.handle(command(directory_id=DEPARTMENT.id.value)))
+    assert repos["employee_repository"].saved[0].company_directory_id == DIRECTORY.id
+    assert dto.account_reused is False
+
+
+def test_manager_cannot_onboard_an_admin():
+    from identity.domain.errors import RoleCeilingError
+
+    handler, repos = build()
+    with pytest.raises(RoleCeilingError):
+        run(handler.handle(command(role=Role.ADMIN, actor_role="MANAGER")))
     assert saved(repos) == (0, 0, 0)
 
 

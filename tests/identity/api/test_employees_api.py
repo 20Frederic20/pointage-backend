@@ -63,8 +63,8 @@ ONBOARD = {
 }
 
 
-def test_onboard_is_for_admins_only(identity_api):
-    _as(identity_api, "HR")
+def test_onboard_is_for_responsible_roles(identity_api):
+    _as(identity_api, "EMPLOYEE")
     assert identity_api.client.post("/employees/onboard", json=ONBOARD).status_code == 403
 
 
@@ -108,3 +108,11 @@ def test_deactivate_then_activate_routes(identity_write_api):
     res = identity_write_api.client.post("/employees/emp1/deactivate")
     assert (res.status_code, res.json()["code"]) == (409, "EMPLOYEE_ALREADY_INACTIVE")
     assert identity_write_api.client.post("/employees/emp1/activate").json()["isActive"] is True
+
+
+def test_onboard_response_says_whether_the_account_was_reused(identity_write_api):
+    from datetime import UTC, datetime
+
+    body = ONBOARD | {"directory_id": "dir1", "assignment_start_date": datetime.now(UTC).date().isoformat()}
+    first = identity_write_api.client.post("/employees/onboard", json=body)
+    assert (first.status_code, first.json()["accountReused"]) == (201, False)

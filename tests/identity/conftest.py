@@ -199,6 +199,14 @@ class InMemoryAssignments(InMemoryWriteRepository):
         )
 
 
+class InMemoryUsers(InMemoryWriteRepository):
+    def __init__(self):
+        super().__init__("User")
+
+    async def find_by_email(self, email):
+        return next((u for u in self.items.values() if u.email == email.strip().lower()), None)
+
+
 class InMemorySites(InMemoryWriteRepository):
     def __init__(self):
         super().__init__("Site")
@@ -217,7 +225,7 @@ def write_side():
 
     side = SimpleNamespace(
         unit_of_work=NoopUnitOfWork(),
-        users=InMemoryWriteRepository("User"),
+        users=InMemoryUsers(),
         employees=InMemoryEmployees(),
         directories=InMemoryWriteRepository("Directory"),
         sites=InMemorySites(),

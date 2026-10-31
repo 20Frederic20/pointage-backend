@@ -44,7 +44,7 @@ class OnboardEmployeeRequest(_CamelSchema):
     directory_id: str
     role: Role = Field(default=Role.EMPLOYEE)
     employee_number: str = Field(min_length=10, max_length=20)
-    is_active: bool = Field(default=False)
+    is_active: bool = Field(default=True)
     phone: str | None = Field(default=None, min_length=10, max_length=20)
     # First day of the initial assignment; today when omitted.
     assignment_start_date: date | None = None
@@ -160,6 +160,8 @@ class EmployeeResponse(_CamelSchema):
     is_active: bool = Field(alias="isActive")
     phone: str | None = Field(default=None)
     user_id: str = Field(alias="userId")
+    company_directory_id: str | None = Field(default=None, alias="companyDirectoryId")
+    account_reused: bool = Field(default=False, alias="accountReused")
     created_at: datetime | None = Field(default=None, alias="createdAt")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
 

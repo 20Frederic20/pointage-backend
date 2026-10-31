@@ -1,7 +1,9 @@
-"""Onboard a new person: their account, the employee and the first assignment,
-saved together — a failed check leaves no account behind."""
+"""Onboard a person in a company: their account (unless the email already has
+one), the employee record and the first assignment, saved together — a failed
+check leaves nothing behind."""
 
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from core.application import CommandHandler, IUnitOfWork
@@ -10,10 +12,7 @@ from core.domain.entity import AggregateRoot
 from identity.domain import DirectoryId, EmployeeAssignmentId, EmployeeId, Role, UserId
 
 from ...domain.entities import Employee, EmployeeAssignment, User
-from ...domain.errors import (
-    EmailAlreadyRegisteredError,
-    EmployeeWithThisNumberAlreadyExistsError,
-)
+from ...domain.errors import AlreadyActiveInCompanyError, EmployeeWithThisNumberAlreadyExistsError
 from ...domain.repositories import (
     IDirectoryRepository,
     IEmployeeAssignmentRepository,
@@ -24,7 +23,7 @@ from ...domain.repositories import (
 from ..commands import OnboardEmployeeCommand
 from ..dtos import EmployeeDTO
 from ..ports import PasswordHasher
-from ..services import AssignmentSiteService
+from ..services import AssignmentSiteService, CompanyService, ensure_can_grant, ensure_responsible
 
 
 class OnboardEmployeeHandler(
@@ -48,28 +47,34 @@ class OnboardEmployeeHandler(
         self._assignments = employee_assignment_repository
         self._directories = directory_repository
         self._assignment_sites = AssignmentSiteService(site_repository=site_repository)
+        self._companies = CompanyService(directory_repository)
         self._password_hasher = password_hasher
 
     async def _execute(
         self, request: OnboardEmployeeCommand
     ) -> tuple[EmployeeDTO, Sequence[AggregateRoot]]:
         # Every check runs before anything is built: the template saves the
-        # three aggregates together, or none of them.
-        if await self._users.find_by_email(request.email) is not None:
-            raise EmailAlreadyRegisteredError(
-                f"Email {request.email.strip().lower()!r} is already registered",
-                context=request.email,
-            )
+        # aggregates together, or none of them.
+        role = Role(request.role) if request.role else Role.EMPLOYEE
+        ensure_can_grant(ensure_responsible(request.actor_role), role)
         if await self._employees.exists_by_employee_number(request.employee_number):
             raise EmployeeWithThisNumberAlreadyExistsError(
                 f"An employee with number {request.employee_number!r} already exists",
                 context=request.employee_number,
             )
         directory = await self._directories.get_by_id(DirectoryId(request.directory_id))
+        company_id = await self._companies.root_of(directory.id)
         site = await self._assignment_sites.resolve(directory, request.site_id)
-        role = Role(request.role) if request.role else Role.EMPLOYEE
+        is_active = request.is_active if request.is_active is not None else True
 
-        user = User.register_owner(
+        existing = await self._users.find_by_email(request.email)
+        if existing is not None and is_active:
+            for record in await self._employees.find_all_by_user_id(existing.id):
+                if record.is_active and record.company_directory_id == company_id:
+                    raise AlreadyActiveInCompanyError(
+                        "This person already has an active record in this company", context=record.id.value
+                    )
+        user = existing or User.register_owner(
             UserId.generate(),
             email=request.email,
             password_hash=(
@@ -87,7 +92,8 @@ class OnboardEmployeeHandler(
             user_id=user.id,
             phone=request.phone,
             role=role,
-            is_active=request.is_active if request.is_active else False,
+            is_active=is_active,
+            company_directory_id=company_id,
         )
         assignment = EmployeeAssignment.assign(
             EmployeeAssignmentId.generate(),
@@ -96,7 +102,9 @@ class OnboardEmployeeHandler(
             site_id=site.id,
             start_date=request.assignment_start_date or datetime.now(UTC).date(),
         )
-        return EmployeeDTO.from_aggregate(employee), [user, employee, assignment]
+        dto = replace(EmployeeDTO.from_aggregate(employee), account_reused=existing is not None)
+        aggregates = [employee, assignment] if existing is not None else [user, employee, assignment]
+        return dto, aggregates
 
     async def _persist(self, aggregate: AggregateRoot) -> None:
         if isinstance(aggregate, User):
