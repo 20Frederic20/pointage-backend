@@ -10,7 +10,8 @@ class EmployeeEmployeeNumberIs(Specification[Employee]):
         self._employee_number = employee_number.strip().lower()
 
     def is_satisfied_by(self, candidate: Employee) -> bool:
-        return candidate.employee_number == self._employee_number
+        # Case-insensitive: matricules are stored as typed (often uppercase).
+        return candidate.employee_number.strip().lower() == self._employee_number
 
     @property
     def employee_number(self) -> str:

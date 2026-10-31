@@ -162,3 +162,10 @@ def test_create_employee_keeps_one_active_record_per_company_and_stores_it(ident
     assert (res.status_code, res.json()["code"]) == (409, "ALREADY_ACTIVE_IN_COMPANY")
     res = identity_write_api.client.post("/employees", json=CREATE | {"role": "EMPLOYEE", "directory_id": "dir9"})
     assert (res.status_code, res.json()["companyDirectoryId"]) == (201, "dir9")
+
+
+def test_list_employees_finds_an_uppercase_matricule_whatever_the_case_typed(identity_api, make_employee):
+    identity_api.employees.items.extend([make_employee(1), make_employee(3)])
+    for typed in ("EMP0000003", "emp0000003", " Emp0000003 "):
+        body = identity_api.client.get("/employees", params={"employee_number": typed}).json()
+        assert [e["id"] for e in body["items"]] == ["emp3"], typed

@@ -1,6 +1,6 @@
 """Users-context leaf specifications → SQLAlchemy where-clauses."""
 
-from sqlalchemy import ColumnElement
+from sqlalchemy import func, ColumnElement
 
 from core.domain.specifications import Specification
 from core.infrastructure.specifications import (
@@ -42,7 +42,7 @@ class EmployeesSpecificationTranslator(SqlAlchemySpecificationTranslator):
 
     def translate_leaf(self, spec: Specification) -> ColumnElement[bool]:
         if isinstance(spec, EmployeeEmployeeNumberIs):
-            return EmployeeModel.employee_number == spec.employee_number
+            return func.lower(EmployeeModel.employee_number) == spec.employee_number
         if isinstance(spec, EmployeeIsActiveIs):
             return EmployeeModel.is_active.is_(spec.expected)
         if isinstance(spec, EmployeeRoleIs):
