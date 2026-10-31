@@ -3,6 +3,7 @@
 from core.application import QueryHandler
 from core.audit import audit
 from core.domain.errors import NotFoundError
+from identity.domain.errors import EmployeeInactiveError
 from identity.domain import UserId
 from identity.domain.repositories import IEmployeeRepository, IUserRepository
 from punch.application.dtos import EmployeeLookupDTO
@@ -20,9 +21,12 @@ class LookupEmployeeHandler(QueryHandler[LookupEmployeeQuery, EmployeeLookupDTO]
 
     async def handle(self, request: LookupEmployeeQuery) -> EmployeeLookupDTO:
         employee = await self.employee_repository.find_by_employee_number(request.employee_number)
-        if employee is None or not employee.is_active:
+        if employee is None:
             audit.warning("action=PUNCH_ASSISTED_LOOKUP user_id=%s employee=%s status=FAIL reason=unknown_employee", request.actor_user_id, request.employee_number)
-            raise NotFoundError("No active employee with this number", context=request.employee_number)
+            raise NotFoundError("No employee with this number", context=request.employee_number)
+        if not employee.is_active:
+            # Never a name for a deactivated record.
+            raise EmployeeInactiveError("This employee is deactivated", context=request.employee_number)
         if employee.user_id == UserId(request.actor_user_id):
             raise SelfAssistedPunchError("The assisted punch is for a colleague, not for yourself", context=employee.id.value)
         try:

@@ -342,3 +342,16 @@ def test_handler_rechecks_the_role(anomalies_api):
             )
     anomaly, _ = stored(anomalies_api, anomaly_id)
     assert anomaly.status == AnomalyStatus.OPEN
+
+
+def test_actor_cannot_decide_anomaly_of_any_of_their_records(anomalies_api):
+    from identity.domain import EmployeeId, Role, UserId
+    from identity.domain.entities import Employee
+
+    anomaly_id = anomalies_api.add_assisted_punch(employee="emp2", assistant="usr1")
+    # usr2 (punched as emp2) is MANAGER in another company: record emp8, listed first.
+    anomalies_api.employees.items.insert(0, Employee(EmployeeId("emp8"), user_id=UserId("usr2"),
+                                                     employee_number="EMP0000008", is_active=True, role=Role.MANAGER))
+    anomalies_api.act_as("usr2", "MANAGER")
+    res = anomalies_api.client.post(f"/anomalies/{anomaly_id}/validate", json={})
+    assert (res.status_code, res.json()["code"]) == (403, "SELF_DECISION")

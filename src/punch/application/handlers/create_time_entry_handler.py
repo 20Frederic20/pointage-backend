@@ -5,7 +5,8 @@ from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.audit import audit
 from core.domain.entity import AggregateRoot
 from core.domain.errors import NotFoundError
-from identity.domain import UserId
+from identity.domain import EmployeeId, UserId
+from identity.domain.errors import EmployeeInactiveError
 from identity.domain.entities import Employee, Site
 from identity.domain.repositories import (
     IEmployeeAssignmentRepository,
@@ -41,10 +42,13 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         self.employee_assignment_repository = employee_assignment_repository
 
     async def _execute(self, request: CreateTimeEntryCommand) -> tuple[TimeEntryDTO, Sequence[AggregateRoot]]:
-        employee: Employee | None = await self.employee_repository.find_by_user_id(UserId(request.user_id))
+        employee = await self._session_employee(request)
         if not employee:
             audit.warning("action=PUNCH user_id=%s status=FAIL reason=no_employee", request.user_id)
             raise NotFoundError("No employee record for this account", context=request.user_id)
+        if not employee.is_active:
+            audit.warning("action=PUNCH user_id=%s employee=%s status=FAIL reason=inactive", request.user_id, employee.employee_number)
+            raise EmployeeInactiveError("This employee record is deactivated", context=employee.id.value)
 
         # The reference location is the directory of the assignment covering today.
         try:
@@ -81,6 +85,16 @@ class CreateTimeEntryHandler(CommandHandler[CreateTimeEntryCommand, TimeEntryDTO
         )
         audit.info("action=PUNCH user_id=%s employee=%s type=%s distance=%.0fm status=OK", request.user_id, employee.employee_number, entry_type.value, distance)
         return TimeEntryDTO.from_aggregate(time_entry), [time_entry]
+
+    async def _session_employee(self, request: CreateTimeEntryCommand) -> Employee | None:
+        """The record the session works with, and only if it belongs to the caller."""
+        if request.employee_id is None:
+            return await self.employee_repository.find_by_user_id(UserId(request.user_id))
+        try:
+            employee = await self.employee_repository.get_by_id(EmployeeId(request.employee_id))
+        except NotFoundError:
+            return None
+        return employee if employee.user_id == UserId(request.user_id) else None
 
     async def _persist(self, aggregate: AggregateRoot) -> None:
         if isinstance(aggregate, TimeEntry):

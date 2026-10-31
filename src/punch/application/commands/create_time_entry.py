@@ -18,3 +18,5 @@ class CreateTimeEntryCommand(Command):
     source: EntrySource
     idempotency_key: str | None = None
     wifi_identifier: str | None = None
+    # The session's employee record (one per company); ``None`` for tokens issued before it existed.
+    employee_id: str | None = None

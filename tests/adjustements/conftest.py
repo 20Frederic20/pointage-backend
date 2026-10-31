@@ -90,6 +90,9 @@ class InMemoryEmployees:
     async def find_by_user_id(self, user_id):
         return next((e for e in self.items if e.user_id == user_id), None)
 
+    async def find_all_by_user_id(self, user_id):
+        return [e for e in self.items if e.user_id == user_id]
+
 
 class InMemoryAnomalyReadRepository:
     """The read-side join, computed from the in-memory write side (what the

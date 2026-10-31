@@ -67,10 +67,11 @@ def test_unassigned_employee_is_409(punch_api):
     assert punch_api.time_entries.items == []
 
 
-def test_unknown_or_inactive_employee_is_404(punch_api):
+def test_unknown_employee_is_404_and_inactive_is_409_employee_inactive(punch_api):
     punch_api.add_employee(3, first_name="Jean", last_name="Dossou", is_active=False)
     as_manager(punch_api)
-    assert manager_punch(punch_api, "emp3").status_code == 404
+    inactive = manager_punch(punch_api, "emp3")
+    assert (inactive.status_code, inactive.json()["code"]) == (409, "EMPLOYEE_INACTIVE")
     assert manager_punch(punch_api, "nope", key="k2").status_code == 404
     assert punch_api.time_entries.items == []
 

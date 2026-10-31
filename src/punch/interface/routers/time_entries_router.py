@@ -41,6 +41,7 @@ async def create_time_entry(
     dto = await time_entries.send(
         CreateTimeEntryCommand(
             user_id=principal.user_id,
+            employee_id=principal.employee_id,
             location=Location(latitude=payload.latitude, longitude=payload.longitude),
             source=payload.source,
             idempotency_key=payload.idempotency_key,

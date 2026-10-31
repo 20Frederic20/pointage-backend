@@ -92,11 +92,11 @@ def test_assisted_punch_for_own_matricule_is_409(punch_api):
     assert_nothing_written(punch_api)
 
 
-def test_assisted_punch_for_unknown_or_inactive_matricule_is_404(punch_api):
+def test_assisted_punch_unknown_is_404_and_inactive_is_409_employee_inactive(punch_api):
     punch_api.add_employee(3, first_name="Ines", last_name="Zinsou", is_active=False)
-    for number in ("EMP9999999", "EMP0000003"):
-        res = assisted(punch_api, employee_number=number)
-        assert res.status_code == 404, number
+    assert assisted(punch_api, employee_number="EMP9999999").status_code == 404
+    inactive = assisted(punch_api, employee_number="EMP0000003")
+    assert (inactive.status_code, inactive.json()["code"]) == (409, "EMPLOYEE_INACTIVE")
     assert_nothing_written(punch_api)
 
 
@@ -159,7 +159,7 @@ def test_lookup_returns_names_only(punch_api):
 def test_lookup_inactive_or_own_matricule(punch_api):
     punch_api.add_employee(3, first_name="Ines", last_name="Zinsou", is_active=False)
     inactive = punch_api.client.get("/time-entries/assisted/employees/EMP0000003")
-    assert inactive.status_code == 404
+    assert (inactive.status_code, inactive.json()["code"]) == (409, "EMPLOYEE_INACTIVE")
     assert "Ines" not in inactive.text and "Zinsou" not in inactive.text
     assert punch_api.client.get("/time-entries/assisted/employees/EMP9999999").status_code == 404
 

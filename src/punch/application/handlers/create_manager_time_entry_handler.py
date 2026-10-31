@@ -11,6 +11,7 @@ from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.audit import audit
 from core.domain.entity import AggregateRoot
 from core.domain.errors import ConflictError, NotFoundError
+from identity.domain.errors import EmployeeInactiveError
 from identity.domain import EmployeeId, Role, UserId
 from identity.domain.errors.errors import RolePermissionDeniedError
 from identity.domain.repositories import (
@@ -73,9 +74,12 @@ class CreateManagerTimeEntryHandler(CommandHandler[CreateManagerTimeEntryCommand
             employee = await self.employee_repository.get_by_id(EmployeeId(request.employee_id))
         except NotFoundError:
             employee = None
-        if employee is None or not employee.is_active:
+        if employee is None:
             audit.warning("action=%s user_id=%s employee=%s status=FAIL reason=unknown_employee", action, actor, request.employee_id)
-            raise NotFoundError("No active employee with this id", context=request.employee_id)
+            raise NotFoundError("No employee with this id", context=request.employee_id)
+        if not employee.is_active:
+            audit.warning("action=%s user_id=%s employee=%s status=FAIL reason=inactive", action, actor, request.employee_id)
+            raise EmployeeInactiveError("This employee is deactivated", context=request.employee_id)
         if employee.user_id == UserId(actor):
             audit.warning("action=%s user_id=%s employee=%s status=FAIL reason=self", action, actor, request.employee_id)
             raise SelfManagerPunchError("You cannot punch for yourself", context=request.employee_id)

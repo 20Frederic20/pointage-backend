@@ -80,6 +80,9 @@ class InMemoryEmployees:
     async def find_by_user_id(self, user_id):
         return next((e for e in self.items if e.user_id == user_id), None)
 
+    async def find_all_by_user_id(self, user_id):
+        return [e for e in self.items if e.user_id == user_id]
+
 
 class InMemoryUsers:
     def __init__(self) -> None:
@@ -209,8 +212,10 @@ def punch_api(photo_storage):
     app.include_router(manager_time_entries_router)
     app.dependency_overrides[get_punches] = lambda: container
 
-    def act_as(user_id, role="EMPLOYEE"):
-        app.dependency_overrides[get_current_principal] = lambda: PrincipalDTO(user_id=user_id, role=role)
+    def act_as(user_id, role="EMPLOYEE", employee_id=None):
+        app.dependency_overrides[get_current_principal] = lambda: PrincipalDTO(
+            user_id=user_id, role=role, employee_id=employee_id
+        )
 
     ns.add_employee = add_employee
     ns.act_as = act_as

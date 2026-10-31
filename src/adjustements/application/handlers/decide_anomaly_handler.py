@@ -63,10 +63,11 @@ class DecideAnomalyHandler(CommandHandler[DecideAnomalyCommand, AnomalyDecisionD
         time_entry = await self.time_entry_repository.get_by_id(anomaly.time_entry_id)
 
         # 3. Never on an anomaly where the actor is the assistant or the punched employee.
-        actor_employee = await self.employee_repository.find_by_user_id(UserId(actor))
+        # Every record of the actor counts: they may work for several companies.
+        actor_records = {e.id for e in await self.employee_repository.find_all_by_user_id(UserId(actor))}
         punched = {anomaly.employee_id, time_entry.employee_id} - {None}
         if (anomaly.assisted_by_user_id is not None and anomaly.assisted_by_user_id.value == actor) or (
-            actor_employee is not None and actor_employee.id in punched
+            actor_records & punched
         ):
             audit.warning("action=%s user_id=%s anomaly=%s status=FAIL reason=self", action, actor, request.anomaly_id)
             raise SelfDecisionError("You cannot decide an anomaly that concerns you", context=request.anomaly_id)

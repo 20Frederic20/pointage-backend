@@ -20,6 +20,7 @@ from core.application import CommandHandler, IEventOutbox, IUnitOfWork
 from core.audit import audit
 from core.domain.entity import AggregateRoot
 from core.domain.errors import ConflictError, NotFoundError
+from identity.domain.errors import EmployeeInactiveError
 from identity.domain import UserId
 from identity.domain.repositories import (
     IEmployeeAssignmentRepository,
@@ -83,9 +84,12 @@ class CreateAssistedTimeEntryHandler(CommandHandler[CreateAssistedTimeEntryComma
 
         # 2. The punched employee: active only, and never the caller.
         employee = await self.employee_repository.find_by_employee_number(request.employee_number)
-        if employee is None or not employee.is_active:
+        if employee is None:
             audit.warning("action=PUNCH_ASSISTED user_id=%s employee=%s status=FAIL reason=unknown_employee", actor, request.employee_number)
-            raise NotFoundError("No active employee with this number", context=request.employee_number)
+            raise NotFoundError("No employee with this number", context=request.employee_number)
+        if not employee.is_active:
+            audit.warning("action=PUNCH_ASSISTED user_id=%s employee=%s status=FAIL reason=inactive", actor, request.employee_number)
+            raise EmployeeInactiveError("This employee is deactivated", context=request.employee_number)
         if employee.user_id == UserId(actor):
             audit.warning("action=PUNCH_ASSISTED user_id=%s employee=%s status=FAIL reason=self", actor, employee.employee_number)
             raise SelfAssistedPunchError("The assisted punch is for a colleague, not for yourself", context=employee.id.value)
