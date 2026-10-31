@@ -7,12 +7,13 @@ from ``src/``, after ``sql/migrations/2026-10-31-employee-actions.sql``::
 
     uv run python -m scripts.activate_and_backfill_employees
 
-* every inactive record is activated (``EmployeeActivated``);
+* every inactive record is activated (``EmployeeActivated``), unless it was
+  activated or deactivated through the app since (a decision, kept);
 * every record without a company gets the root directory of its earliest
   assignment (``EmployeeCompanySet``); a record with no assignment is left as is.
 
 The projection runner, started with the app, carries both into the read database.
-Re-runnable: a second run changes nothing.
+Re-runnable: a second run changes nothing, and never undoes a deactivation.
 """
 
 import asyncio
@@ -24,6 +25,7 @@ from core.settings import DatabaseSettings
 from identity.application.services import CompanyService
 from identity.domain import EmployeeId
 from identity.domain.entities import Employee
+from identity.domain.events import EmployeeActivated, EmployeeDeactivated
 from identity.infrastructure.persistence.event_sourced_directory_repository import EventSourcedDirectoryRepository
 from identity.infrastructure.persistence.event_sourced_employee_assignment_repository import (
     EventSourcedEmployeeAssignmentRepository,
@@ -37,11 +39,16 @@ from identity.infrastructure.persistence.event_sourced_employee_repository impor
 logger = logging.getLogger(__name__)
 
 
-async def backfill(employees, employee_repository, assignment_repository, company_service) -> tuple[int, int]:
-    """Activate and set the company of ``employees``; returns ``(activated, companies_set)``."""
+async def backfill(
+    employees, employee_repository, assignment_repository, company_service, *, toggled=frozenset()
+) -> tuple[int, int]:
+    """Activate and set the company of ``employees``; returns ``(activated, companies_set)``.
+
+    ``toggled``: records already activated or deactivated by hand — never reactivated here.
+    """
     activated = companies_set = 0
     for employee in employees:
-        if not employee.is_active:
+        if not employee.is_active and employee.id not in toggled:
             employee.activate()
             activated += 1
         if employee.company_directory_id is None:
@@ -64,11 +71,18 @@ async def main() -> None:
             ids = await store.find_stream_ids(EMPLOYEE_STREAM)
             streams = await store.load_streams(ids, EMPLOYEE_EVENT_TYPES)
             employees = [Employee.rehydrate(EmployeeId(stream_id), events) for stream_id, events in streams.items()]
+            # A deactivation (or activation) made through the app is a decision: keep it.
+            toggled = {
+                EmployeeId(stream_id)
+                for stream_id, events in streams.items()
+                if any(isinstance(event, EmployeeActivated | EmployeeDeactivated) for event in events)
+            }
             activated, companies_set = await backfill(
                 employees,
                 EventSourcedEmployeeRepository(store),
                 EventSourcedEmployeeAssignmentRepository(store),
                 CompanyService(EventSourcedDirectoryRepository(store)),
+                toggled=toggled,
             )
         print(f"{len(employees)} employee record(s): {activated} activated, {companies_set} company set")
     finally:

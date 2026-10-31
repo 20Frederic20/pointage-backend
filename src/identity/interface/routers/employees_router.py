@@ -45,8 +45,10 @@ def _employee_list_response(page) -> EmployeeListResponse:
 )
 async def create(
     payload: CreateEmployeeRequest,
+    principal: PrincipalDTO = Depends(require_role(Role.MANAGER, Role.HR, Role.PAYROLL, Role.ADMIN)),  # noqa: B008
     users: UsersContainer = Depends(get_users),  # noqa: B008
 ) -> EmployeeResponse:
+    """Add an employee record to an existing account (responsible roles, under the role ceiling)."""
     dto = await users.send(
         CreateEmployeeCommand(
             user_id=payload.user_id,
@@ -57,6 +59,8 @@ async def create(
             role=payload.role,
             assignment_start_date=payload.assignment_start_date,
             site_id=payload.site_id,
+            actor_user_id=principal.user_id,
+            actor_role=principal.role,
         )
     )
 

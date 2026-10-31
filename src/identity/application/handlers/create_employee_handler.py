@@ -19,7 +19,8 @@ from ...domain.repositories import (
 )
 from ..commands import CreateEmployeeCommand
 from ..dtos import EmployeeDTO
-from ..services import AssignmentSiteService
+from ...domain.errors import AlreadyActiveInCompanyError
+from ..services import AssignmentSiteService, CompanyService, ensure_can_grant, ensure_responsible
 
 
 class CreateEmployeeHandler(
@@ -42,10 +43,14 @@ class CreateEmployeeHandler(
         self._assignments = employee_assignment_repository
         self._directories = directory_repository
         self._assignment_sites = AssignmentSiteService(site_repository=site_repository)
+        self._companies = CompanyService(directory_repository)
 
     async def _execute(
         self, request: CreateEmployeeCommand
     ) -> tuple[EmployeeDTO, Sequence[AggregateRoot]]:
+        # A record's role reaches the access token: same rules as onboarding.
+        role = Role(request.role) if request.role else Role.EMPLOYEE
+        ensure_can_grant(ensure_responsible(request.actor_role), role)
         if await self._employees.exists_by_employee_number(request.employee_number):
             raise EmployeeWithThisNumberAlreadyExistsError(
                 f"An employee with number {request.employee_number!r} already exists",
@@ -55,15 +60,24 @@ class CreateEmployeeHandler(
         # no foreign keys, so nothing else would refuse an unknown user.
         user = await self._users.get_by_id(UserId(request.user_id))
         directory = await self._directories.get_by_id(DirectoryId(request.directory_id))
+        company_id = await self._companies.root_of(directory.id)
         site = await self._assignment_sites.resolve(directory, request.site_id)
+        is_active = request.is_active if request.is_active is not None else True
+        if is_active:
+            for record in await self._employees.find_all_by_user_id(user.id):
+                if record.is_active and record.company_directory_id == company_id:
+                    raise AlreadyActiveInCompanyError(
+                        "This person already has an active record in this company", context=record.id.value
+                    )
 
         employee = Employee.create(
             employee_id=EmployeeId.generate(),
             employee_number=request.employee_number,
             user_id=user.id,
             phone=request.phone,
-            role=Role(request.role),
-            is_active=request.is_active if request.is_active else False,
+            role=role,
+            is_active=is_active,
+            company_directory_id=company_id,
         )
         assignment = EmployeeAssignment.assign(
             EmployeeAssignmentId.generate(),

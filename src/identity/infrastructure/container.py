@@ -276,6 +276,7 @@ class UsersContainer:
             return EndEmployeeAssignmentHandler(
                 unit_of_work=self.unit_of_work,
                 employee_assignment_repository=self.employee_assignment_repository,
+                employee_repository=self.employee_repository,
                 event_outbox=self.event_outbox,
             )
         if handler_type is GetUserByEmailHandler:

@@ -23,7 +23,8 @@ from ...domain.repositories import (
 from ..commands import OnboardEmployeeCommand
 from ..dtos import EmployeeDTO
 from ..ports import PasswordHasher
-from ..services import AssignmentSiteService, CompanyService, ensure_can_grant, ensure_responsible
+from ...domain.errors import RoleCeilingError
+from ..services import AssignmentSiteService, CompanyService, ensure_can_grant, ensure_can_manage, ensure_responsible
 
 
 class OnboardEmployeeHandler(
@@ -56,7 +57,8 @@ class OnboardEmployeeHandler(
         # Every check runs before anything is built: the template saves the
         # aggregates together, or none of them.
         role = Role(request.role) if request.role else Role.EMPLOYEE
-        ensure_can_grant(ensure_responsible(request.actor_role), role)
+        actor_role = ensure_responsible(request.actor_role)
+        ensure_can_grant(actor_role, role)
         if await self._employees.exists_by_employee_number(request.employee_number):
             raise EmployeeWithThisNumberAlreadyExistsError(
                 f"An employee with number {request.employee_number!r} already exists",
@@ -68,8 +70,18 @@ class OnboardEmployeeHandler(
         is_active = request.is_active if request.is_active is not None else True
 
         existing = await self._users.find_by_email(request.email)
+        records = await self._employees.find_all_by_user_id(existing.id) if existing is not None else []
+        if existing is not None:
+            # Nobody adds a record to an account above their own rank.
+            ensure_can_manage(actor_role, Role(existing.role))
+            # An account without records logs in with its own role: its first record
+            # becomes its role, so it never silently demotes the account.
+            if not records and not role.at_least(Role(existing.role)):
+                raise RoleCeilingError(
+                    f"This account is {existing.role}: its first record cannot be {role}", context=existing.id.value
+                )
         if existing is not None and is_active:
-            for record in await self._employees.find_all_by_user_id(existing.id):
+            for record in records:
                 if record.is_active and record.company_directory_id == company_id:
                     raise AlreadyActiveInCompanyError(
                         "This person already has an active record in this company", context=record.id.value

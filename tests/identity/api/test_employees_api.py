@@ -140,3 +140,25 @@ def test_list_and_detail_include_names_company_and_current_site(identity_write_a
     bare = identity_write_api.client.get("/employees/emp2").json()
     assert (bare["companyName"], bare["currentSiteName"]) == (None, None)
     assert identity_write_api.client.get("/employees").status_code == 200
+
+
+CREATE = {"user_id": "usr1", "directory_id": "dir2", "employee_number": "EMP0000007", "role": "ADMIN",
+          "is_active": True}
+
+
+def test_create_employee_is_for_responsible_roles_under_the_ceiling(identity_write_api):
+    _seed_record(identity_write_api)
+    identity_write_api.as_("EMPLOYEE", user_id="usr1")  # an employee granting themself ADMIN
+    assert identity_write_api.client.post("/employees", json=CREATE).status_code == 403
+    identity_write_api.as_("MANAGER")
+    res = identity_write_api.client.post("/employees", json=CREATE)
+    assert (res.status_code, res.json()["code"]) == (403, "ROLE_CEILING")
+
+
+def test_create_employee_keeps_one_active_record_per_company_and_stores_it(identity_write_api):
+    _seed_record(identity_write_api)  # usr1 already active in company dir1
+    identity_write_api.as_("ADMIN")
+    res = identity_write_api.client.post("/employees", json=CREATE | {"role": "EMPLOYEE"})
+    assert (res.status_code, res.json()["code"]) == (409, "ALREADY_ACTIVE_IN_COMPANY")
+    res = identity_write_api.client.post("/employees", json=CREATE | {"role": "EMPLOYEE", "directory_id": "dir9"})
+    assert (res.status_code, res.json()["companyDirectoryId"]) == (201, "dir9")

@@ -56,7 +56,7 @@ class VerifyLoginCodeHandler(CommandHandler[VerifyLoginCodeCommand, TokenPairDTO
 
         outcome = resolve_employment(account, await self._accounts.employments(account.id))
         if outcome is None:
-            # The code is consumed; the employee number names an inactive record.
+            # The employee number names an inactive record (raising rolls the attempt back).
             audit.warning("action=OTP_VERIFY identifier=%s status=FAIL reason=inactive_record", request.identifier)
             raise InvalidLoginCodeError("Invalid login code")
         if isinstance(outcome, SelectionRequired):

@@ -42,3 +42,11 @@ def test_backfill_skips_company_without_assignment(write_side):
     lonely = _seed(write_side, 1, active=True)
     assert _run(write_side) == (0, 0)
     assert lonely.company_directory_id is None
+
+
+def test_backfill_never_reactivates_a_record_deactivated_on_purpose(write_side):
+    deactivated = _seed(write_side, 1, active=False, assigned_to="dir2")
+    activated, _ = asyncio.run(backfill(list(write_side.employees.items.values()), write_side.employees,
+                                        write_side.assignments, CompanyService(write_side.directories),
+                                        toggled={deactivated.id}))
+    assert (activated, deactivated.is_active) == (0, False)

@@ -170,7 +170,7 @@ def test_role_defaults_to_employee_for_both():
 
 
 def test_onboard_with_existing_email_reuses_account_and_creates_second_record():
-    existing = User.register_owner(UserId.generate(), email="ana@pointage.bj", password_hash="h", role=Role.HR,
+    existing = User.register_owner(UserId.generate(), email="ana@pointage.bj", password_hash="h", role=Role.MANAGER,
                                    first_name="Ana", last_name="Dossou")
     handler, repos = build(users=(existing,))
     dto = run(handler.handle(command(email=" Ana@Pointage.BJ ", first_name="Ignored", employee_number="EMP0000002")))
@@ -178,7 +178,7 @@ def test_onboard_with_existing_email_reuses_account_and_creates_second_record():
     [employee] = repos["employee_repository"].saved
     assert (employee.user_id, employee.employee_number, employee.company_directory_id) == (
         existing.id, "EMP0000002", DIRECTORY.id)
-    assert (dto.account_reused, existing.first_name, existing.role) == (True, "Ana", Role.HR)
+    assert (dto.account_reused, existing.first_name, existing.role) == (True, "Ana", Role.MANAGER)
 
 
 def test_onboard_same_company_twice_is_409():
@@ -229,3 +229,26 @@ def test_directory_without_site_saves_nothing():
     with pytest.raises(DirectoryHasNoSiteError):
         run(handler.handle(command()))
     assert saved(repos) == (0, 0, 0)
+
+
+def test_onboarding_cannot_demote_an_account_without_records():
+    from identity.domain.errors import RoleCeilingError
+
+    founder = User.register_owner(UserId.generate(), email="ana@pointage.bj", password_hash=None, role=Role.ADMIN)
+    handler, repos = build(users=(founder,))
+    with pytest.raises(RoleCeilingError):
+        run(handler.handle(command(role=Role.EMPLOYEE, employee_number="EMP0000002")))
+    assert saved(repos) == (0, 0, 0)
+
+
+def test_manager_cannot_add_a_record_to_a_higher_account():
+    from identity.domain import EmployeeId
+    from identity.domain.entities import Employee
+    from identity.domain.errors import RoleCeilingError
+
+    hr = User.register_owner(UserId.generate(), email="ana@pointage.bj", password_hash=None, role=Role.HR)
+    record = Employee(EmployeeId.generate(), user_id=hr.id, employee_number="EMP0000001", is_active=True,
+                      role=Role.HR, company_directory_id=DirectoryId("dirother"))
+    handler, repos = build(users=(hr,), records=(record,))
+    with pytest.raises(RoleCeilingError):
+        run(handler.handle(command(role=Role.EMPLOYEE, employee_number="EMP0000002", actor_role="MANAGER")))
